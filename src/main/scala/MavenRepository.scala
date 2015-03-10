@@ -14,7 +14,7 @@ class MavenPackage(val name:String, val version:String) extends Package {
 }
 
 class MavenRepository extends Repository {
-  type packaget = MavenPackage
+  type PackageT = MavenPackage
   type Conflict = (PackageT, PackageT)
   type Constraints = Set[Set[PackageT]]
 
