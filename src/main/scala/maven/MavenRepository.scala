@@ -15,13 +15,15 @@ class MavenPackage(val name:String, val version:String) extends Package {
 
 class MavenRepository extends Repository {
   type PackageT = MavenPackage
-  type Conflict = (PackageT, PackageT)
-  type Constraints = Set[Set[PackageT]]
+  type PackagesT = Set[PackageT]
+  type ConflictsT = Map[PackageT, PackageT]
+  type ConstraintsT = Set[Set[PackageT]]
+  type Fetcher = PackageT => ConstraintsT
 
-  private val dependencies = new TrieMap[PackageT, Constraints]
+  private val dependencies = new TrieMap[PackageT, ConstraintsT]
 
   // recursively fetch the dependency closure
-  override def construct(initial: Constraints, fetcher: PackageT => Constraints): Unit = {
+  def construct(initial: ConstraintsT, fetcher: Fetcher): Unit = {
     for (set <- initial)
       for (p <- set)
         if (dependencies.putIfAbsent(p, Set()) == null) // atomic
@@ -31,9 +33,7 @@ class MavenRepository extends Repository {
           }
   }
 
-  override def apply(p: PackageT) = {
-    dependencies(p)
-  }
+  override def apply(p: PackageT) = dependencies(p)
 
   override def packages = dependencies.keys.toSet
 

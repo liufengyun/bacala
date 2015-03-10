@@ -4,6 +4,7 @@ abstract class DependencyManager {
   type Result
   type Repo <: Repository
 
+  // call the algorithm to resolve dependency
   def resolve(repository: Repo): Result
 }
 
@@ -11,18 +12,16 @@ abstract class Package
 
 abstract class Repository {
   type PackageT <: Package
-  type Conflict
-  type Constraints
+  type PackagesT
+  type ConflictsT
+  type ConstraintsT
 
-  // recursively construct the repository from initial constraints to form dependency closure
-  def construct(initial: Constraints, fetcher: PackageT => Constraints)
-
-  // return a conjunctive set of disjunctive sets of packages
+  // return constraints of the package p
   def apply(p: PackageT)
 
   // all packages in the repository
-  def packages: Set[PackageT]
+  def packages: PackagesT
 
-  // all basic conflicts in the repository
-  def conflicts: Set[Conflict]
+  // all primitive conflicts in the repository
+  def conflicts: ConflictsT
 }
