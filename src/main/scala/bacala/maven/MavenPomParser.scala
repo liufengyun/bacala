@@ -34,11 +34,27 @@ object MavenPomParser extends (String => Set[Set[MavenPackage]]) {
   override def apply(spec: String) = {
     val node = XML.loadString(spec)
 
-    val constraints = for (dep <- (node \ "dependencies" \ "dependency")) yield parseDependency(dep)
+    val constraints = (node \ "dependencies" \ "dependency") map (dep => parseDependency(dep))
     constraints.toSet
   }
 
   private def parseDependency(dep: Node) = {
-    Set(MavenPackage((dep \ "groupId")(0).text, (dep \ "artifactId")(0).text, (dep \ "version")(0).text))
+    val groupId = (dep \ "groupId").text
+    val artifactId = (dep \ "artifactId").text
+    val version = (dep \ "version").text
+
+    val allVersions = getAllVersions(groupId, artifactId)
+    val compatibleVersions = getCompatibleVersions(version, allVersions)
+
+    compatibleVersions.map(v => MavenPackage(groupId, artifactId, version)).toSet
   }
+
+  private def getAllVersions(groupId:String, artifactId:String) = {
+    val metaData = MavenFetcher.getMetaData(groupId, artifactId)
+    val node = XML.loadString(metaData)
+
+    (node \ "versioning" \ "versions") map (_.text)
+  }
+
+  private def getCompatibleVersions(version: String, allVersions: Seq[String]): Seq[String] = ???
 }
