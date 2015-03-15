@@ -1,4 +1,4 @@
-package bacala.core
+package bacala
 
 abstract class DependencyManager {
   type Result
