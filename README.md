@@ -14,7 +14,7 @@ The objective of this project is:
 
 ## Command Line Interface
 
-The program takes in an Ivy dependency specifiction XML file, and outputs the solution to the console as a tree. If there's no solution, it indicates where the insolvable conflict happens.
+The program takes in a dependency specifiction XML file, and outputs the solution to the console as a tree. If there's no solution, it indicates where the insolvable conflict happens.
 
 ## Development
 
