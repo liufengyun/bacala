@@ -16,6 +16,8 @@ case class MavenPackage(groupId:String, artifactId:String, version:String) exten
       this.groupId == group && this.artifactId == artifact && this.version == ver
     case _ => false
   }
+
+  override def toString = groupId + ":" + artifactId + "-" + version
 }
 
 class MavenRepository extends Repository {
@@ -35,6 +37,7 @@ class MavenRepository extends Repository {
       p <- disjunctiveSet
       if dependencies.putIfAbsent(p, Set()) == null // atomic
     }  {
+      println("Downloading POM file for" + p)
       val constraints = fetcher(p)
       dependencies.put(p, constraints)
       construct(constraints, fetcher)

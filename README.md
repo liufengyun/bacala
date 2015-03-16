@@ -12,13 +12,29 @@ The objective of this project is:
 - Improve efficiency of network IO through reactive programming
 - Provide well-defined API and command line interface
 
-## Command Line Interface
+## Run
 
-The program takes in a dependency specifiction XML file, and outputs the solution to the console as a tree. If there's no solution, it indicates where the insolvable conflict happens.
+`sbt "run filename.xml"`
 
-## Development
+The input XML is a fragment of POM, e.g.
 
-### Test
+``` xml
+<project>
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>[2.11.3, 2.11.6)</version>
+    </dependency>
+    <dependency>
+      <groupId>com.typesafe</groupId>
+      <artifactId>config</artifactId>
+      <version>(1.1.1, 1.2.1]</version>
+    </dependency>
+  </dependencies>
+</project>
+```
 
-Run `sbt test` to execute the test set.
+## Test
 
+`sbt test`
