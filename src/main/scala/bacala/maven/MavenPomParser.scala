@@ -28,11 +28,16 @@ package bacala.maven
 import scala.xml.XML
 import scala.xml.Node
 
-object MavenPomParser extends (String => Set[Set[MavenPackage]]) {
-  override def apply(spec: String) = {
+object MavenPomParser extends ((String, String) => Set[Set[MavenPackage]]) {
+  override def apply(spec:String, scope:String="compile") = {
     val node = XML.loadString(spec)
 
-    val constraints = (node \ "dependencies" \ "dependency") map (dep => parseDependency(dep))
+    val constraints = for {
+      dep <- node \ "dependencies" \ "dependency"
+      scopeP = (dep \ "scope").text
+      if  (scopeP == "" && scope == "compile") || scope == scopeP // compile is the default
+    } yield parseDependency(dep)
+
     constraints.toSet
   }
 

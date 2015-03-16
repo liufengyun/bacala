@@ -35,9 +35,8 @@ class MavenRepository extends Repository {
     for {
       disjunctiveSet <- initial
       p <- disjunctiveSet
-      if dependencies.putIfAbsent(p, Set()) == null // atomic
+      if dependencies.putIfAbsent(p, Set()) == None // atomic
     }  {
-      println("Downloading POM file for" + p)
       val constraints = fetcher(p)
       dependencies.put(p, constraints)
       construct(constraints, fetcher)

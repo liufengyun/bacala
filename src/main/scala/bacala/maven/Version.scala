@@ -42,7 +42,7 @@ object Version {
   val full       =   """^(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)$""".r
 
   // unstandard: 1.0-b1, 1.0-b1.1
-  val simple2    =  """^(\d+)\.(\d+)-(.+)$""".r
+  val simple2    =   """^(\d+)\.(\d+)-(.+)$""".r
 
   // unstandard: 2.7.3.RC1
   val druple     =   """^(\d+)\.(\d+)\.(\d+)\.(\w+)$""".r

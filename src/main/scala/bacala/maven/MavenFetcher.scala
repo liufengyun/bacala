@@ -16,6 +16,7 @@ object MavenFetcher extends (MavenPackage => String) {
   def getMetaData(groupId: String, artifactId: String) = getResponse(metaDataURL(groupId, artifactId))
 
   def getResponse(url: String) = {
+    println("Downloading " + url)
     Http(url).asString.body
   }
 
