@@ -42,9 +42,9 @@ object MavenPomParser extends (String => Set[Set[MavenPackage]]) {
     val version = (dep \ "version").text
 
     val allVersions = getAllVersions(groupId, artifactId)
-    val compatibleVersions = getCompatibleVersions(version, allVersions)
+    val compatibleVersions = getCompatibleVersions(VersionRange(version), allVersions)
 
-    compatibleVersions.map(v => MavenPackage(groupId, artifactId, version)).toSet
+    compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
   }
 
   private def getAllVersions(groupId:String, artifactId:String) = {
@@ -54,8 +54,7 @@ object MavenPomParser extends (String => Set[Set[MavenPackage]]) {
     (node \ "versioning" \ "versions" \ "version") map (_.text)
   }
 
-  private def getCompatibleVersions(version: String, allVersions: Seq[String]) = {
-    val vr = VersionRange(version)
-    allVersions.filter(s => vr.contains(Version(s)))
+  private def getCompatibleVersions(range: VersionRange, allVersions: Seq[String]) = {
+    allVersions.filter(s => range.contains(Version(s)))
   }
 }
