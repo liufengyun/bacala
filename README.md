@@ -14,7 +14,7 @@ The objective of this project is:
 
 ## Run
 
-`sbt "run filename.xml"`
+`sbt "run data/github-api.xml"`
 
 The input XML is a fragment of POM, e.g.
 
