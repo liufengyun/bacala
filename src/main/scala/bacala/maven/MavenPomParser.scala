@@ -19,12 +19,10 @@ package bacala.maven
  *
  * TODO
  *
- *  1. no version specification
- *  2. a range of versions
- *  3. exclusions
- *  4. properties
- *  5. parent/child projects
- *  6. multi-module/agregating projects
+ *  - exclusions
+ *  - properties
+ *  - parent/child projects
+ *  - multi-module/agregating projects
  */
 
 import scala.xml.XML

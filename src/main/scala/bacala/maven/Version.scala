@@ -21,10 +21,12 @@ case class Version(major:Int, minor:Int, revision:Int, qualifier:String, build:I
           if (this.minor < that.minor) true else
             if (this.revision > that.revision) false else
               if (this.revision < that.revision) true else
-                if (this.qualifier > that.qualifier) false else
-                  if (this.qualifier < that.qualifier) true else
-                    if (this.build > that.build) false else
-                      if (this.build < that.build) true else false
+                if (this.qualifier == "" && that.qualifier != "") false else
+                  if (this.qualifier != "" && that.qualifier == "") true else
+                    if (this.qualifier > that.qualifier) false else
+                      if (this.qualifier < that.qualifier) true else
+                        if (this.build > that.build) false else
+                          if (this.build < that.build) true else false
   }
 }
 
@@ -33,11 +35,18 @@ class InvalidVersionFormat(msg: String) extends Exception(msg)
 object Version {
 
   // <major>.<minor>[.<revision>]([ -<qualififer> ] | [ -<build> ])
-  val simple     =   """^(\d+).(\d+)$""".r
-  val triple     =   """^(\d+).(\d+).(\d+)$""".r
-  val build      =   """^(\d+).(\d+).(\d+)-(\d+)$""".r
-  val qualifier  =   """^(\d+).(\d+).(\d+)-(\w+)$""".r
-  val full       =   """^(\d+).(\d+).(\d+)-(\w+)-(\d+)$""".r
+  val simple     =   """^(\d+)\.(\d+)$""".r
+  val triple     =   """^(\d+)\.(\d+)\.(\d+)$""".r
+  val build      =   """^(\d+)\.(\d+)\.(\d+)-(\d+)$""".r
+  val qualifier  =   """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
+  val full       =   """^(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)$""".r
+
+  // unstandard: 2.7.3.RC1
+  val druple     =   """^(\d+)\.(\d+)\.(\d+)\.(\w+)$""".r
+
+  // unstandard: 2.8.0.Beta1-RC1
+  // 2.10.0-M1-virtualized.rdev-4217-2012-01-24-g9118644
+  val wildcard   =   """^(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)$""".r
 
   def apply(ver: String): Version = ver match {
     case simple(major, minor) =>
@@ -50,6 +59,10 @@ object Version {
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case full(major, minor, revision, qualifier, build) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, build.toInt)
+    case druple(major, minor, revision, qualifier) =>
+      Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
+    case wildcard(major, minor, revision, qualifier) =>
+      Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case _ => throw new InvalidVersionFormat("Unknown version format: " + ver)
   }
 

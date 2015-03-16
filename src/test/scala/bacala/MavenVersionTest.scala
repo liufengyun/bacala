@@ -25,10 +25,20 @@ class MavenVersionSuite extends BasicSuite {
     assert(Version("3.6.2-RC4-4") === Version(3, 6, 2, "RC4", 4))
   }
 
+  test("unstandard druple") {
+    assert(Version("2.7.3.RC1") === Version(2, 7, 3, "RC1", 0))
+  }
+
+  test("wildcard") {
+    assert(Version("2.8.0.Beta1-RC1") === Version(2, 8, 0, "Beta1-RC1", 0))
+    assert(Version("2.10.0-M1-virtualized.rdev-4217-2012-01-24-g9118644") === Version(2, 10, 0, "M1-virtualized.rdev-4217-2012-01-24-g9118644", 0))
+  }
+
   test("Vesion comparison") {
     assert(Version("3.6.2-RC4-4") < Version("3.6.2-RC4-5"))
     assert(Version("3.6") > Version("3.5.2-RC4-5"))
     assert(Version("3.5.2-RC4-5") < Version("3.5.2-TC4-5"))
+    assert(Version("2.10.3-RC2") < Version("2.10.3"))
   }
 
   test("simple range") {
