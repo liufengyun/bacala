@@ -41,6 +41,9 @@ object Version {
   val qualifier  =   """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
   val full       =   """^(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)$""".r
 
+  // unstandard: 1.0-b1, 1.0-b1.1
+  val simple2    =  """^(\d+)\.(\d+)-(.+)$""".r
+
   // unstandard: 2.7.3.RC1
   val druple     =   """^(\d+)\.(\d+)\.(\d+)\.(\w+)$""".r
 
@@ -59,6 +62,8 @@ object Version {
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case full(major, minor, revision, qualifier, build) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, build.toInt)
+    case simple2(major, minor, qualifier) =>
+      Version(major.toInt, minor.toInt, 0, qualifier, 0)
     case druple(major, minor, revision, qualifier) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case wildcard(major, minor, revision, qualifier) =>

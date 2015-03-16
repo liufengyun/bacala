@@ -9,14 +9,15 @@ object MavenDependencyManager extends DependencyManager {
   override def resolve(initial: ConstraintsT): Result = {
     val repo = new MavenRepository()
     repo.construct(initial, p => (MavenPomParser(MavenFetcher(p))))
+    println(repo.packages.mkString("\n"))
     Set()
   }
 
   def printUsage = {
     println(
-      "**************************\n" +
-      "Usage: bacala filename.xml\n" +
-      "**************************\n"
+      """*****************************\n""" +
+      """Usage: sbt "run filename.xml"\n""" +
+      """*****************************\n"""
     )
   }
 

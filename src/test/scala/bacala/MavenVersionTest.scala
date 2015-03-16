@@ -26,6 +26,8 @@ class MavenVersionSuite extends BasicSuite {
   }
 
   test("unstandard druple") {
+    assert(Version("1.0-b1") === Version(1, 0, 0, "b1", 0))
+    assert(Version("1.0-b1.1") === Version(1, 0, 0, "b1.1", 0))
     assert(Version("2.7.3.RC1") === Version(2, 7, 3, "RC1", 0))
   }
 
