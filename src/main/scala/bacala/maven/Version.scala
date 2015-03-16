@@ -26,12 +26,6 @@ case class Version(major:Int, minor:Int, revision:Int, qualifier:String, build:I
                     if (this.build > that.build) false else
                       if (this.build < that.build) true else false
   }
-
-  override def equals(other: Any) = other match {
-    case v:Version =>
-      !(this > v) && !(this < v)
-    case _ => false
-  }
 }
 
 class InvalidVersionFormat(msg: String) extends Exception(msg)
@@ -82,7 +76,9 @@ object Version {
  *    (,1.1), (1.1,)  This excludes 1.1 if it is known not to work in combination with this library
  *
  */
-sealed abstract class VersionRange
+sealed abstract class VersionRange {
+  def contains(version: Version): Boolean
+}
 
 object VersionRange  {
   import scala.util.matching.Regex
@@ -97,8 +93,11 @@ object VersionRange  {
   }
 }
 
-// e.g. 1.0, maven interprets it like >= 1.0
-case class SimpleRange(version: Version) extends VersionRange
+// e.g. 1.0
+case class SimpleRange(version: Version) extends VersionRange {
+  // NOTE: maven interprets 1.0 like >= 1.0
+  override def contains(ver: Version) = this.version == ver || this.version < ver
+}
 
 object SimpleRange {
   def apply(ver: String): SimpleRange = SimpleRange(Version(ver))
@@ -111,7 +110,12 @@ object SimpleRange {
 }
 
 // (,1.0] or (,1.1)
-case class OpenLeftRange(max: Version, included: Boolean) extends VersionRange
+case class OpenLeftRange(max: Version, included: Boolean) extends VersionRange {
+  // NOTE: maven interprets 1.0 like >= 1.0
+  override def contains(ver: Version) = {
+    (this.included && this.max == ver) || this.max > ver
+  }
+}
 
 object OpenLeftRange {
   val openLeft1 = """^\s*\(\s*,\s*(\S+)\s*\)\s*$""".r
@@ -131,7 +135,11 @@ object OpenLeftRange {
 }
 
 // [1.5,) or (1.1,)
-case class OpenRightRange(min: Version, included: Boolean) extends VersionRange
+case class OpenRightRange(min: Version, included: Boolean) extends VersionRange {
+  override def contains(ver: Version) = {
+    (this.included && this.min == ver) || this.min < ver
+  }
+}
 
 object OpenRightRange {
   val openRight1 = """^\s*\(\s*(\S+)\s*,\s*\)\s*$""".r
@@ -152,7 +160,13 @@ object OpenRightRange {
 
 
 // [1.0,2.0)
-case class IntervalRange(min: Version, max: Version, leftIncluded: Boolean, rightIncluded: Boolean) extends VersionRange
+case class IntervalRange(min: Version, max: Version, leftIncluded: Boolean, rightIncluded: Boolean) extends VersionRange {
+  override def contains(ver: Version) = {
+    (this.leftIncluded && this.min == ver) ||
+    (this.rightIncluded && this.max == ver) ||
+    (min < ver && ver < max)
+  }
+}
 
 object IntervalRange {
   val interval1 = """^\s*\(\s*(\S+)\s*,\s*(\S+)\s*\)\s*$""".r
@@ -176,7 +190,11 @@ object IntervalRange {
 }
 
 // (,1.0], [1.2,)
-case class CompositeRange(intervals: List[VersionRange]) extends VersionRange
+case class CompositeRange(intervals: List[VersionRange]) extends VersionRange {
+  override def contains(ver: Version) = {
+    this.intervals.exists(_.contains(ver))
+  }
+}
 
 object CompositeRange {
   val rangePat = """[\(\[][^\]\)]{4,}[\)\]]""".r

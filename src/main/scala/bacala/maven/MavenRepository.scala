@@ -6,7 +6,7 @@ import scala.collection.concurrent.TrieMap
 
 import bacala._
 
-case class MavenPackage(val groupId:String, val artifactId:String, val version:String) extends Package {
+case class MavenPackage(groupId:String, artifactId:String, version:String) extends Package {
   override def hashCode = {
     (List(groupId, artifactId, version) :\ 1) { (field, r) => r + 31*field.hashCode }
   }

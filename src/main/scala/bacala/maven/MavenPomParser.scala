@@ -53,8 +53,11 @@ object MavenPomParser extends (String => Set[Set[MavenPackage]]) {
     val metaData = MavenFetcher.getMetaData(groupId, artifactId)
     val node = XML.loadString(metaData)
 
-    (node \ "versioning" \ "versions") map (_.text)
+    (node \ "versioning" \ "versions" \ "version") map (_.text)
   }
 
-  private def getCompatibleVersions(version: String, allVersions: Seq[String]): Seq[String] = ???
+  private def getCompatibleVersions(version: String, allVersions: Seq[String]) = {
+    val vr = VersionRange(version)
+    allVersions.filter(s => vr.contains(Version(s)))
+  }
 }
