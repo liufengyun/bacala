@@ -16,24 +16,7 @@ The objective of this project is:
 
 `sbt "run data/github-api.xml"`
 
-The input XML is a fragment of POM, e.g.
-
-``` xml
-<project>
-  <dependencies>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>[2.11.3, 2.11.6)</version>
-    </dependency>
-    <dependency>
-      <groupId>com.typesafe</groupId>
-      <artifactId>config</artifactId>
-      <version>(1.1.1, 1.2.1]</version>
-    </dependency>
-  </dependencies>
-</project>
-```
+The input XML is a POM file.
 
 ## Test
 

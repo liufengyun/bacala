@@ -9,7 +9,10 @@ object MavenDependencyManager extends DependencyManager {
   override def resolve(initial: ConstraintsT): Result = {
     val repo = new MavenRepository()
     repo.construct(initial, MavenFetcher(_) map (xml => MavenPomParser(xml, Scope.COMPILE)))
+    println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))
+    println("*****all conflicts in repository******")
+    println(repo.conflicts.mkString("\n"))
     Set()
   }
 
