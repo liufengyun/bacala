@@ -1,34 +1,94 @@
 package bacala.maven
 
-/**
- * Parse POM XML file into constraint objects
- *
- * Reference: [1] http://maven.apache.org/pom.html
- *            [2] http://docs.codehaus.org/display/MAVEN/Dependency+Mediation+and+Conflict+Resolution
- *
- * Standard Meaning of Version Specification
- *
- *    (,1.0]          x <= 1.0
- *    1.0             "Soft" requirement on 1.0 (>=1.0)
- *    [1.0]           Hard requirement on 1.0
- *    [1.2,1.3]       1.2 <= x <= 1.3
- *    [1.0,2.0)       1.0 <= x < 2.0
- *    [1.5,)          x >= 1.5
- *    (,1.0], [1.2,)  x <= 1.0 or x >= 1.2. Multiple sets are comma-separated
- *    (,1.1),(1.1,)   This excludes 1.1 if it is known not to work in combination with this library
- *
- * TODO
- *
- *  - exclusions
- *  - properties
- *  - parent/child projects
- *  - multi-module/agregating projects
- */
 
 import scala.xml.XML
 import scala.xml.Node
 import Scope._
 
+/**
+  * A minimal, lazy and practical support of properties in POM files.
+  *
+  * Currently only variable properties and path properties are supported.
+  *
+  * A variable property is like ${someVar}, which should be defined in
+  * the section /project/properties of the POM file.
+  *
+  * A path property is like ${project.version}. To resolve this property,
+  * the resolver should start from the root of the XML tree, following the
+  * path in the property, and return the text of the last matched node.
+  *
+  * A particularity in POM is that it has a <parent></parent> section within
+  * <project></project>. The path property ${project.version} can also be
+  * resolved to the path /project/parent/version if it can't be resolved
+  * at the path /project/version.
+  *
+  * TODO: currently the implementation doesn't support the full inheritance
+  * mechanism of POM file. It should be extended when there's compelling
+  * need to do so.
+  *
+  * Reference: http://maven.apache.org/pom.html#Properties
+  */
+object Property {
+  val propertyPat = """\s*\$\{\s*([A-Za-z0-9.]+)\s*\}\s*""".r
+
+  def resolve(node: Node)(property: String): String = {
+    val parts = property.split('.')
+    if (parts.length == 1) resolveVariable(node, parts(0)) // variable property
+    else resolvePath(node, parts) // path property
+  }
+
+  private def resolveVariable(node: Node, property: String) = {
+    (node \ "properties" \ property ).text
+  }
+
+  private def resolvePath(node: Node, path: Array[String]) = {
+    val initial: Option[Node] = Some(node)
+    val result = (initial /: path.tail) { (opt, part) =>
+      for {
+        node <- opt
+        seq = node \ part
+        if seq.length > 0
+      } yield seq(0)
+    }
+
+    result match {
+      case Some(node) => node.text
+      case None =>
+        ((node \ "parent") /: path.tail) { (child, part) => (child \ part)(0) }.text
+    }
+  }
+
+  def unapply(s: String): Option[String] = s match {
+    case propertyPat(prop) => Some(prop)
+    case _ => None
+  }
+}
+
+/**
+  * Parse POM XML file into constraint objects
+  *
+  * Standard Meaning of Version Specification
+  *
+  *    (,1.0]          x <= 1.0
+  *    1.0             "Soft" requirement on 1.0 (>=1.0)
+  *    [1.0]           Hard requirement on 1.0
+  *    [1.2,1.3]       1.2 <= x <= 1.3
+  *    [1.0,2.0)       1.0 <= x < 2.0
+  *    [1.5,)          x >= 1.5
+  *    (,1.0], [1.2,)  x <= 1.0 or x >= 1.2. Multiple sets are comma-separated
+  *    (,1.1),(1.1,)   This excludes 1.1 if it is known not to work in combination with this library
+  *
+  * TODO
+  *
+  *  - exclusions
+  *  - properties
+  *  - parent/child projects
+  *  - multi-module/agregating projects
+  *
+  * Reference: [1] http://maven.apache.org/pom.html
+  *            [2] http://docs.codehaus.org/display/MAVEN/Dependency+Mediation+and+Conflict+Resolution
+  *
+  */
 object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
 
   override def apply(spec:String, scope:Scope=COMPILE) = {
@@ -38,19 +98,26 @@ object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
       dep <- node \ "dependencies" \ "dependency"
       scopeP = (dep \ "scope").text
       if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
-      depSet <- parseDependency(dep)
+      depSet <- parseDependency(dep, Property.resolve(node))
     } yield depSet
 
     constraints.toSet
   }
 
-  private def parseDependency(dep: Node) = {
+
+  private def parseDependency(dep: Node, propertyResolver: String => String) = {
     val groupId = (dep \ "groupId").text
     val artifactId = (dep \ "artifactId").text
-    val version = (dep \ "version").text
+
+    // version range specification can be a property
+    val range = (dep \ "version").text match {
+      case Property(prop) => VersionRange(propertyResolver(prop))
+      case VersionRange(range) => range
+      case ver => throw new InvalidVersionFormat("Unknown version format: " + ver)
+    }
 
     getAllVersions(groupId, artifactId) map { allVersions =>
-      val compatibleVersions = getCompatibleVersions(VersionRange(version), allVersions)
+      val compatibleVersions = getCompatibleVersions(range, allVersions)
       compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
     }
   }

@@ -109,6 +109,12 @@ object VersionRange  {
     case CompositeRange(r) => r
     case _ => throw new InvalidVersionFormat("Unknown verion range: " + s)
   }
+
+  def unapply(s: String): Option[VersionRange] = try {
+    Some(apply(s))
+  } catch {
+    case e: InvalidVersionFormat => None
+  }
 }
 
 // e.g. 1.0

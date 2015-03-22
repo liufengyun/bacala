@@ -2,6 +2,7 @@ package bacala.test
 
 import org.scalatest._
 import bacala.maven._
+import scala.xml.XML
 
 class MavenPomParserSuite extends BasicSuite {
   test("parse POM with range version") {
@@ -69,4 +70,53 @@ class MavenPomParserSuite extends BasicSuite {
     ))
   }
 
+  test("version specification via property") {
+    assert(Property.unapply("${project.version}").nonEmpty)
+    assert(Property.unapply("${project.version}").get === "project.version")
+    assert(Property.unapply("  ${project.version}").get === "project.version")
+    assert(Property.unapply("${project.version}  ").get === "project.version")
+    assert(Property.unapply("${  project.version}  ").get === "project.version")
+    assert(Property.unapply("${project.version  }  ").get === "project.version")
+  }
+
+  test("test variable property") {
+    val xml = """<project><properties><x>56</x></properties></project>"""
+    assert(Property.resolve(XML.loadString(xml))("x") === "56")
+  }
+
+  test("test path property resolution") {
+    val xml =   """
+      <project>
+          <version>4.3</version>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    assert(Property.resolve(XML.loadString(xml))("project.version") === "4.3")
+  }
+
+  test("test path property resolution via parent") {
+    val xml =   """
+      <project>
+          <parent>
+              <version>4.3</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    assert(Property.resolve(XML.loadString(xml))("project.version") === "4.3")
+  }
 }
