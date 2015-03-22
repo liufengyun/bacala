@@ -113,6 +113,7 @@ object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
     val range = (dep \ "version").text match {
       case Property(prop) => VersionRange(propertyResolver(prop))
       case VersionRange(range) => range
+      case "" => SimpleRange(Version(0, 0, 0, "", 0)) // version unspecified
       case ver => throw new InvalidVersionFormat("Unknown version format: " + ver)
     }
 
