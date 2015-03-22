@@ -1,10 +1,13 @@
 package bacala.maven
 
-/*
- * Fetch the POM file of a package from repository
- *
- * TODO: (1) multiple repos; (2) retries logic; (3) checksum;
- */
+/**
+  * Fetch the POM file of a package from repository
+  *
+  * TODO:
+  *  - cache same URL retrieval results in file system
+  *  - multiple repos;
+  *  - retries logic;
+  */
 
 import scalaj.http._
 
