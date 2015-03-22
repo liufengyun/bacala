@@ -31,28 +31,47 @@ class MavenRepository extends Repository {
   private val failureSet = new TrieMap[PackageT, Unit]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
 
+  def initialize(initial: ConstraintsT, fetcher: Fetcher): Unit = {
+    construct(initial, fetcher)
+    createConflicts
+  }
+
   // recursively fetch the dependency closure
   // TODO : use Future to fetch in asynchronous and in parallel
   def construct(initial: ConstraintsT, fetcher: Fetcher): Unit = {
-    // update conflict set. Packages with the same artefactId but different versions conflict
-    for (disjunctiveSet <- initial) {
-      // TODO: reduce symmetric duplicates, (p, q) and (q, p)
-      conflictSet ++= disjunctiveSet.flatMap(p => (disjunctiveSet - p).map(q => (p, q) -> ()))
+    for {
+      disjunctiveSet <- initial
+      p <- disjunctiveSet
+      if !failureSet.contains(p)
+      if dependencies.putIfAbsent(p, Set()) == None // atomic
     }
-
-    // update dependency
-    for (disjunctiveSet <- initial; p <- disjunctiveSet) {
-      if (!failureSet.contains(p) && dependencies.putIfAbsent(p, Set()) == None) { // atomic
-        fetcher(p) match {
-          case Some(constraints) =>
-            dependencies += p -> constraints
-            construct(constraints, fetcher)
-          case None =>
-            dependencies -= p
-            failureSet += p -> ()
-        }
+      fetcher(p) match {
+        case Some(constraints) =>
+          dependencies += p -> constraints
+          construct(constraints, fetcher)
+        case None =>
+          dependencies -= p
+          failureSet += p -> ()
       }
-    }
+  }
+
+  // Intialize conflicts structure from repository data
+  // TODO: reduce symmetric duplicates, (p, q) and (q, p)
+  private def createConflicts = {
+    val pkgs = this.packages
+
+    val conflicts = for {
+      p <- pkgs
+      q <- pkgs - p
+      if inConflict(p, q)
+    } yield (p, q) -> ()
+
+    conflictSet ++= conflicts
+  }
+
+  // Packages with the same artefactId but different versions are in conflict
+  def inConflict(p: MavenPackage, q: MavenPackage): Boolean = {
+    p.groupId == q.groupId && p.artifactId == q.artifactId
   }
 
   override def apply(p: PackageT) = dependencies(p)
