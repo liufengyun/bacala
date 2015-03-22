@@ -81,8 +81,8 @@ object Property {
   * TODO
   *
   *  - exclusions
+  *  - dependency in parent projects
   *  - properties
-  *  - parent/child projects
   *  - multi-module/agregating projects
   *
   * Reference: [1] http://maven.apache.org/pom.html
