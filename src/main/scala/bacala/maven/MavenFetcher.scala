@@ -4,7 +4,7 @@ package bacala.maven
   * Fetch the POM file of a package from repository
   *
   * TODO:
-  *  - cache same URL retrieval results in file system
+  *  - cache the same query in file system for a period
   *  - multiple repos;
   *  - retries logic;
   */
@@ -28,24 +28,25 @@ object MavenFetcher extends (MavenPackage => Option[String]) {
     }
   }
 
-  /*
-   * returns POM URL for a package
-   *
-   * Format: $BASE_REPO/:groupId/:artifactId/:version/:artifactId-version.pom
-   *
-   * e.g. http://repo1.maven.org/maven2/org/scala-lang/scala-library/2.11.6/scala-library-2.11.6.pom
-   */
+  /**
+    * returns POM URL for a package
+    *
+    * Format: $BASE_REPO/:groupId/:artifactId/:version/:artifactId-version.pom
+    *
+    * e.g. http://repo1.maven.org/maven2/org/scala-lang/scala-library/2.11.6/scala-library-2.11.6.pom
+    */
   def pomURL(p: MavenPackage) = {
     s"${MavenRepoBase}/${p.groupId.replace(".", "/")}/${p.artifactId}/${p.version}/${p.artifactId}-${p.version}.pom"
   }
 
-  /* returns the meta-data URL for an artifact
-   *
-   * Format:  $BASE_REPO/:groupId/:artifactId/maven-metadata.xml
-   *
-   * e.g.
-   * http://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml
-   */
+  /**
+    * returns the meta-data URL for an artifact
+    *
+    * Format:  $BASE_REPO/:groupId/:artifactId/maven-metadata.xml
+    *
+    * e.g.
+    * http://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml
+    */
   def metaDataURL(groupId: String, artifactId: String) = {
     s"${MavenRepoBase}/${groupId.replace(".", "/")}/${artifactId}/maven-metadata.xml"
   }
