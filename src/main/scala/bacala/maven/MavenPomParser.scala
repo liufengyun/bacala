@@ -32,9 +32,13 @@ object Property {
   val propertyPat = """\s*\$\{\s*([A-Za-z0-9.]+)\s*\}\s*""".r
 
   def resolve(node: Node)(property: String): String = {
-    val parts = property.split('.')
-    if (parts.length == 1) resolveVariable(node, parts(0)) // variable property
-    else resolvePath(node, parts) // path property
+    // first try variable property
+    val res = resolveVariable(node, property) // variable property
+
+    if (!res.isEmpty) res else {
+      val parts = property.split('.')
+      resolvePath(node, parts) // path property
+    }
   }
 
   private def resolveVariable(node: Node, property: String) = {

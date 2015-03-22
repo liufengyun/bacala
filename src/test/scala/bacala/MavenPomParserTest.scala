@@ -107,6 +107,11 @@ class MavenPomParserSuite extends BasicSuite {
     assert(Property.resolve(XML.loadString(xml))("x") === "56")
   }
 
+  test("test variable property with dot in name") {
+    val xml = """<project><properties><x.y>56</x.y></properties></project>"""
+    assert(Property.resolve(XML.loadString(xml))("x.y") === "56")
+  }
+
   test("test path property resolution") {
     val xml =   """
       <project>
