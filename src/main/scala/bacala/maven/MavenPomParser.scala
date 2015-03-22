@@ -118,7 +118,17 @@ object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
     }
 
     getAllVersions(groupId, artifactId) map { allVersions =>
-      val compatibleVersions = getCompatibleVersions(range, allVersions)
+      // filter old, illegal version numbers
+      // print a warning
+      val legalVersions = allVersions.filter { ver =>
+        if (Version.unapply(ver).nonEmpty) true else {
+          println("Error: unknown version format " + ver + " in meta data XML of " +
+            groupId + ":" +artifactId)
+          false
+        }
+      }
+
+      val compatibleVersions = getCompatibleVersions(range, legalVersions)
       compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
     }
   }
