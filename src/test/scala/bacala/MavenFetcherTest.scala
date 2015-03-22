@@ -22,11 +22,19 @@ class MavenFetchSuite extends BasicSuite {
   test("fetch POM file") {
     val p = MavenPackage("org.scala-lang", "scala-library", "2.11.5")
     val file = MavenFetcher(p)
-    assert((XML.loadString(file) \ "artifactId").length === 1)
+    assert(file.nonEmpty)
+    assert((XML.loadString(file.get) \ "artifactId").length === 1)
   }
 
   test("fetch meta data XML") {
     val file = MavenFetcher.getMetaData("org.scala-lang", "scala-library")
-    assert((XML.loadString(file) \ "versioning" \ "versions").length > 0)
+    assert(file.nonEmpty)
+    assert((XML.loadString(file.get) \ "versioning" \ "versions").length > 0)
   }
+
+  test("fetch in-existent file") {
+    val file = MavenFetcher.getMetaData("org.scala-lang", "foo-library")
+    assert(file.isEmpty)
+  }
+
 }

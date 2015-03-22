@@ -3,6 +3,7 @@ package bacala.maven
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.{Set => MutableSet}
 
 import bacala._
 
@@ -25,9 +26,10 @@ class MavenRepository extends Repository {
   type PackagesT = Set[PackageT]
   type ConflictsT = Map[PackageT, PackageT]
   type ConstraintsT = Set[Set[PackageT]]
-  type Fetcher = PackageT => ConstraintsT
+  type Fetcher = PackageT => Option[ConstraintsT]
 
   private val dependencies = new TrieMap[PackageT, ConstraintsT]
+  private val failureSet = MutableSet[PackageT]()
 
   // recursively fetch the dependency closure
   // TODO : use Future to fetch in asynchronous and in parallel
@@ -35,11 +37,16 @@ class MavenRepository extends Repository {
     for {
       disjunctiveSet <- initial
       p <- disjunctiveSet
-      if dependencies.putIfAbsent(p, Set()) == None // atomic
+      if !failureSet.contains(p) && dependencies.putIfAbsent(p, Set()) == None // atomic
     }  {
-      val constraints = fetcher(p)
-      dependencies.put(p, constraints)
-      construct(constraints, fetcher)
+      fetcher(p) match {
+        case Some(constraints) =>
+          dependencies.put(p, constraints)
+          construct(constraints, fetcher)
+        case None =>
+          dependencies.remove(p)
+          failureSet.add(p)
+      }
     }
   }
 

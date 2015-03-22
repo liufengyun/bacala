@@ -8,7 +8,7 @@ package bacala.maven
 
 import scalaj.http._
 
-object MavenFetcher extends (MavenPackage => String) {
+object MavenFetcher extends (MavenPackage => Option[String]) {
   val MavenRepoBase = "http://repo1.maven.org/maven2"
 
   override def apply(p: MavenPackage) = getResponse(pomURL(p))
@@ -17,7 +17,12 @@ object MavenFetcher extends (MavenPackage => String) {
 
   def getResponse(url: String) = {
     println("Downloading " + url)
-    Http(url).asString.body
+    val response = Http(url).asString
+
+    if (response.code == 200) Some(response.body) else {
+      println("Error: failed to download " + url)
+      None
+    }
   }
 
   /*

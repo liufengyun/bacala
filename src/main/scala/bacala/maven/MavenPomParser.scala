@@ -1,6 +1,6 @@
 package bacala.maven
 
-/*
+/**
  * Parse POM XML file into constraint objects
  *
  * Reference: [1] http://maven.apache.org/pom.html
@@ -27,16 +27,19 @@ package bacala.maven
 
 import scala.xml.XML
 import scala.xml.Node
+import Scope._
 
-object MavenPomParser extends ((String, String) => Set[Set[MavenPackage]]) {
-  override def apply(spec:String, scope:String="compile") = {
+object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
+
+  override def apply(spec:String, scope:Scope=COMPILE) = {
     val node = XML.loadString(spec)
 
     val constraints = for {
       dep <- node \ "dependencies" \ "dependency"
       scopeP = (dep \ "scope").text
-      if  (scopeP == "" && scope == "compile") || scope == scopeP // compile is the default
-    } yield parseDependency(dep)
+      if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
+      depSet <- parseDependency(dep)
+    } yield depSet
 
     constraints.toSet
   }
@@ -46,17 +49,16 @@ object MavenPomParser extends ((String, String) => Set[Set[MavenPackage]]) {
     val artifactId = (dep \ "artifactId").text
     val version = (dep \ "version").text
 
-    val allVersions = getAllVersions(groupId, artifactId)
-    val compatibleVersions = getCompatibleVersions(VersionRange(version), allVersions)
-
-    compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
+    getAllVersions(groupId, artifactId) map { allVersions =>
+      val compatibleVersions = getCompatibleVersions(VersionRange(version), allVersions)
+      compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
+    }
   }
 
   private def getAllVersions(groupId:String, artifactId:String) = {
-    val metaData = MavenFetcher.getMetaData(groupId, artifactId)
-    val node = XML.loadString(metaData)
-
-    (node \ "versioning" \ "versions" \ "version") map (_.text)
+    MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
+      (XML.loadString(metaData) \ "versioning" \ "versions" \ "version") map (_.text)
+    }
   }
 
   private def getCompatibleVersions(range: VersionRange, allVersions: Seq[String]) = {
