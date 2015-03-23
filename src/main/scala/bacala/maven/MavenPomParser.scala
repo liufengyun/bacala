@@ -29,7 +29,7 @@ import Scope._
   * Reference: http://maven.apache.org/pom.html#Properties
   */
 object Property {
-  val propertyPat = """\s*\$\{\s*([A-Za-z0-9.]+)\s*\}\s*""".r
+  val propertyPat = """\s*\$\{\s*([A-Za-z0-9.-]+)\s*\}\s*""".r
 
   def resolve(node: Node)(property: String): String = {
     // first try variable property
@@ -47,7 +47,9 @@ object Property {
 
   private def resolvePath(node: Node, path: Array[String]) = {
     val initial: Option[Node] = Some(node)
-    val result = (initial /: path.tail) { (opt, part) =>
+    // support old-style property like ${version}
+    val parts = if (path(0) == "project") path.tail else path
+    val result = (initial /: parts) { (opt, part) =>
       for {
         node <- opt
         seq = node \ part

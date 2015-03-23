@@ -121,8 +121,16 @@ class MavenPomParserSuite extends BasicSuite {
 
   test("test variable property with dot in name") {
     val xml = """<project><properties><x.y>56</x.y></properties></project>"""
+    assert(Property.unapply("${x.y}").nonEmpty)
     assert(Property.resolve(XML.loadString(xml))("x.y") === "56")
   }
+
+  test("test variable property with dash in name") {
+    val xml = """<project><properties><x-y>56</x-y></properties></project>"""
+    assert(Property.unapply("${x-y}").nonEmpty)
+    assert(Property.resolve(XML.loadString(xml))("x-y") === "56")
+  }
+
 
   test("test path property resolution") {
     val xml =   """
@@ -139,6 +147,11 @@ class MavenPomParserSuite extends BasicSuite {
       """
 
     assert(Property.resolve(XML.loadString(xml))("project.version") === "4.3")
+  }
+
+  test("test old-style path property") {
+    val xml = """<project><version>56</version><artifactId>test-artifact</artifactId></project>"""
+    assert(Property.resolve(XML.loadString(xml))("version") === "56")
   }
 
   test("test path property resolution via parent") {
