@@ -86,6 +86,7 @@ object Property {
   *
   *  - exclusions
   *  - dependency in parent projects
+  *  - version specified in parent dependencyManagement section
   *  - properties
   *  - multi-module/agregating projects
   *
@@ -93,33 +94,87 @@ object Property {
   *            [2] http://docs.codehaus.org/display/MAVEN/Dependency+Mediation+and+Conflict+Resolution
   *
   */
-object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
 
-  override def apply(spec:String, scope:Scope=COMPILE) = {
-    val node = XML.loadString(spec)
+
+class PomFile(node: Node) {
+  val groupId = (node \ "groupId").text
+  val artifactId = (node \ "artifactId").text
+  val version = (node \ "version").text
+
+  var parent: PomFile  = null
+
+  def parse(scope: Scope = COMPILE): Set[Set[MavenPackage]] = {
+    if (hasParent) parent = getParent
 
     val constraints = for {
       dep <- node \ "dependencies" \ "dependency"
       scopeP = (dep \ "scope").text
       if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
-      depSet <- parseDependency(dep, Property.resolve(node))
+      depSet <- parseDependency(dep)
     } yield depSet
 
-    constraints.toSet
+    if (parent == null) constraints.toSet else (parent.parse(scope) ++ constraints).toSet
   }
 
+  // resolve version which can be a property, a range, or defined in parent file
+  private def resolveVersion(groupId: String, artifactId: String, ver: String) = ver match {
+    case Property(prop) => VersionRange(Property.resolve(node)(prop))
+    case VersionRange(range) => range
+    case "" if parent != null => parent.managedVersionFor(groupId, artifactId)  // version specified in parent POM file
+    case ver => throw new InvalidVersionFormat("Unknown version format: " + ver)
+  }
 
-  private def parseDependency(dep: Node, propertyResolver: String => String) = {
+  // resolve artifact version specified in dependencyManagement section
+  def managedVersionFor(groupId: String, artifactId: String): VersionRange = {
+    object SameArtifact {
+      def unapply(dep: Node): Option[VersionRange] = {
+        val gid = (dep \ "groupId").text
+        val aid = (dep \ "artifactId").text
+        val ver = resolveVersion(groupId, artifactId, (dep \ "version").text)
+
+        if (groupId == gid && artifactId == aid)
+          Some(ver)
+        else None
+      }
+    }
+
+    (node \ "dependencyManagement" \ "dependencies" \ "dependency") collectFirst {
+      case SameArtifact(ver) => ver
+    } match {
+      case Some(v) => v
+      case None =>
+        println("Error: can't find version specification in parent for " + groupId + ":" + artifactId)
+        defaultVersion(groupId, artifactId)
+    }
+  }
+
+  private def hasParent = (node \ "parent").length > 0
+
+  private def getParent = {
+    val groupId = (node \ "parent" \ "groupId").text
+    val artifactId = (node \ "parent" \ "artifactId").text
+    val version = (node \ "parent" \ "version").text
+
+    MavenFetcher(MavenPackage(groupId, artifactId, version)) match {
+      case Some(spec) => new PomFile(XML.loadString(spec))
+      case None =>
+        println("Error: failed to get parent POM for " + MavenPackage(groupId, artifactId, version))
+        null
+    }
+  }
+
+  // if there's no parent section, use the default version
+  def defaultVersion(groupId: String, artifactId: String): VersionRange = {
+    // SimpleRange(Version(0, 0, 0, "", 0))
+    throw new InvalidVersionFormat("version unspecified for " + groupId + ":" + artifactId)
+  }
+
+  private def parseDependency(dep: Node) = {
     val groupId = (dep \ "groupId").text
     val artifactId = (dep \ "artifactId").text
 
     // version range specification can be a property
-    val range = (dep \ "version").text match {
-      case Property(prop) => VersionRange(propertyResolver(prop))
-      case VersionRange(range) => range
-      case "" => SimpleRange(Version(0, 0, 0, "", 0)) // version unspecified
-      case ver => throw new InvalidVersionFormat("Unknown version format: " + ver)
-    }
+    val range = resolveVersion(groupId, artifactId, (dep \ "version").text)
 
     getAllVersions(groupId, artifactId) map { allVersions =>
       // filter old, illegal version numbers
@@ -145,5 +200,16 @@ object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
 
   private def getCompatibleVersions(range: VersionRange, allVersions: Seq[String]) = {
     allVersions.filter(s => range.contains(Version(s)))
+  }
+}
+
+
+object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
+  type VersionResolver = (String, String) => VersionRange
+  type PropertyResolver = String => String
+
+  override def apply(spec: String, scope: Scope = COMPILE) = {
+    val pom = new PomFile(XML.loadString(spec))
+    pom.parse(scope).toSet
   }
 }

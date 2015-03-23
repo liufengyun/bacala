@@ -37,7 +37,7 @@ class MavenRepository extends Repository {
   }
 
   // recursively fetch the dependency closure
-  // TODO : use Future to fetch in asynchronous and in parallel
+  // TODO : use Futures to fetch data in parallel
   def construct(initial: ConstraintsT, fetcher: Fetcher): Unit = {
     for {
       disjunctiveSet <- initial
@@ -71,7 +71,7 @@ class MavenRepository extends Repository {
 
   // Packages with the same artefactId but different versions are in conflict
   def inConflict(p: MavenPackage, q: MavenPackage): Boolean = {
-    p.groupId == q.groupId && p.artifactId == q.artifactId
+    p.groupId == q.groupId && p.artifactId == q.artifactId && p.version != q.version
   }
 
   override def apply(p: PackageT) = dependencies(p)
