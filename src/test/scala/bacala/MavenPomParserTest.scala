@@ -41,6 +41,32 @@ class MavenPomParserSuite extends BasicSuite {
     ))
   }
 
+  test("test new line and space in specification") {
+    val deps = MavenPomParser(
+      """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
+          <dependencies>
+              <dependency>
+                  <groupId>  org.scala-lang </groupId>
+                  <artifactId>
+scala-library
+</artifactId>
+                  <version>
+[2.11.3, 2.11.3]
+</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """,
+      Scope.COMPILE)
+
+    assert(deps === Set(Set(MavenPackage("org.scala-lang", "scala-library", "2.11.3"))))
+  }
+
+
   test("parse POM with composite range version") {
     val deps = MavenPomParser(
       """

@@ -42,7 +42,7 @@ object Property {
   }
 
   private def resolveVariable(node: Node, property: String) = {
-    (node \ "properties" \ property ).text
+    (node \ "properties" \ property ).text.trim
   }
 
   private def resolvePath(node: Node, path: Array[String]) = {
@@ -58,9 +58,9 @@ object Property {
     }
 
     result match {
-      case Some(node) => node.text
+      case Some(node) => node.text.trim
       case None =>
-        ((node \ "parent") /: path.tail) { (child, part) => (child \ part)(0) }.text
+        ((node \ "parent") /: path.tail) { (child, part) => (child \ part)(0) }.text.trim
     }
   }
 
@@ -93,7 +93,7 @@ object PomFile {
 
   def apply(spec: String) = {
     val node = XML.loadString(spec)
-    val artifactId = (node \ "artifactId").text
+    val artifactId = (node \ "artifactId").text.trim
     // version and groupId may be inherited from /project/parent
     val groupId = Property.resolve(node)("project.groupId")
     val version = Property.resolve(node)("project.version")
@@ -151,7 +151,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
 
     var constraints = (for {
       dep <- node \ "dependencies" \ "dependency"
-      scopeP = (dep \ "scope").text
+      scopeP = (dep \ "scope").text.trim
       if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
       depSet <- parseDependency(dep)
     } yield depSet).toSet
@@ -181,9 +181,9 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   def managedVersionFor(groupId: String, artifactId: String): VersionRange = {
     object SameArtifact {
       def unapply(dep: Node): Option[VersionRange] = {
-        val gid = (dep \ "groupId").text
-        val aid = (dep \ "artifactId").text
-        val ver = resolveVersion(groupId, artifactId, (dep \ "version").text)
+        val gid = (dep \ "groupId").text.trim
+        val aid = (dep \ "artifactId").text.trim
+        val ver = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
 
         if (groupId == gid && artifactId == aid)
           Some(ver)
@@ -210,9 +210,9 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     * parse the parent section, download POM for parent and create a new PomFile instance
     */
   private def loadParent = {
-    val groupId = (node \ "parent" \ "groupId").text
-    val artifactId = (node \ "parent" \ "artifactId").text
-    val version = (node \ "parent" \ "version").text
+    val groupId = (node \ "parent" \ "groupId").text.trim
+    val artifactId = (node \ "parent" \ "artifactId").text.trim
+    val version = (node \ "parent" \ "version").text.trim
 
     val pom = PomFile(MavenPackage(groupId, artifactId, version))
 
@@ -231,7 +231,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     */
   private def loadModules = {
     (node \ "modules" \ "module").map({module =>
-      val artifactId = module.text
+      val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
       val pom = PomFile(MavenPackage(groupId, artifactId, version))
       if (pom == null)
@@ -256,11 +256,11 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     * as disjunctive constraints
     */
   private def parseDependency(dep: Node) = {
-    val groupId = (dep \ "groupId").text
-    val artifactId = (dep \ "artifactId").text
+    val groupId = (dep \ "groupId").text.trim
+    val artifactId = (dep \ "artifactId").text.trim
 
     // version range specification can be a property
-    val range = resolveVersion(groupId, artifactId, (dep \ "version").text)
+    val range = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
 
     getAllVersions(groupId, artifactId) map { allVersions =>
       // filter old, illegal version numbers
@@ -283,7 +283,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     */
   private def getAllVersions(groupId:String, artifactId:String) = {
     MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
-      (XML.loadString(metaData) \ "versioning" \ "versions" \ "version") map (_.text)
+      (XML.loadString(metaData) \ "versioning" \ "versions" \ "version") map (_.text.trim)
     }
   }
 
