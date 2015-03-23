@@ -41,15 +41,15 @@ object Version {
   val qualifier  =   """(\d+)\.(\d+)\.(\d+)-(\w+)""".r
   val full       =   """(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)""".r
 
-  // unstandard: 1.0-b1, 1.0-b1.1
-  val simple2    =   """(\d+)\.(\d+)-(.+)""".r
-
   // unstandard: 2.7.3.RC1
   val druple     =   """(\d+)\.(\d+)\.(\d+)\.(\w+)""".r
 
   // unstandard: 2.8.0.Beta1-RC1
   // 2.10.0-M1-virtualized.rdev-4217-2012-01-24-g9118644
   val wildcard   =   """(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)""".r
+
+  // unstandard: 1.0-b1, 1.0-b1.1, 2.0b4
+  val double    =   """(\d+)\.(\d+)[-_]?(.+)""".r
 
   // unstandard: 1
   val number     =   """(\d+)""".r
@@ -65,12 +65,12 @@ object Version {
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case full(major, minor, revision, qualifier, build) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, build.toInt)
-    case simple2(major, minor, qualifier) =>
-      Version(major.toInt, minor.toInt, 0, qualifier, 0)
     case druple(major, minor, revision, qualifier) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case wildcard(major, minor, revision, qualifier) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
+    case double(major, minor, qualifier) =>
+      Version(major.toInt, minor.toInt, 0, qualifier, 0)
     case number(major) =>
       Version(major.toInt, 0, 0, "", 0)
     case _ => throw new InvalidVersionFormat("Unknown version format: " + ver)
