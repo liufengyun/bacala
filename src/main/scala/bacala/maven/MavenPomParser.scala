@@ -262,33 +262,36 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     // version range specification can be a property
     val range = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
 
-    getAllVersions(groupId, artifactId) map { allVersions =>
-      // filter old, illegal version numbers
-      // print a warning
-      val legalVersions = allVersions.filter { ver =>
+    MetaFile(groupId, artifactId) map { versions =>
+      val compatibleVersions = versions.filter(s => range.contains(Version(s)))
+      compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
+    }
+  }
+}
+
+/**
+  * The object MetaFile is the interface to get all version definitions for
+  * an artifact. It does caching internally.
+  */
+object MetaFile {
+  var cache = Map[String, Seq[String]]()
+
+  def apply(groupId: String, artifactId: String): Option[Seq[String]] = {
+    if (cache.contains(groupId + artifactId)) Some(cache(groupId + artifactId)) else
+
+    MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
+      val versions = (XML.loadString(metaData) \ "versioning" \ "versions" \ "version").map(_.text.trim).filter { ver =>
+        // filter old, illegal version numbers
         if (Version.unapply(ver).nonEmpty) true else {
           println("Error: unknown version format " + ver + " in meta data XML of " +
             groupId + ":" +artifactId)
           false
         }
       }
+      cache = cache + ((groupId + artifactId) -> versions)
 
-      val compatibleVersions = getCompatibleVersions(range, legalVersions)
-      compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
+      versions
     }
-  }
-
-  /**
-    * TODO: use cache to avoid duplicate HTTP request and parsing
-    */
-  private def getAllVersions(groupId:String, artifactId:String) = {
-    MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
-      (XML.loadString(metaData) \ "versioning" \ "versions" \ "version") map (_.text.trim)
-    }
-  }
-
-  private def getCompatibleVersions(range: VersionRange, allVersions: Seq[String]) = {
-    allVersions.filter(s => range.contains(Version(s)))
   }
 }
 
