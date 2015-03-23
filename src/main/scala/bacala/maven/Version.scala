@@ -49,7 +49,7 @@ object Version {
   val wildcard   =   """(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)""".r
 
   // unstandard: 1.0-b1, 1.0-b1.1, 2.0b4
-  val double    =   """(\d+)\.(\d+)[-_]?(.+)""".r
+  val double    =   """(\d+)\.(\d+)[-_.]?(.+)""".r
 
   // unstandard: 1
   val number     =   """(\d+)""".r

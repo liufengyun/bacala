@@ -31,6 +31,7 @@ class MavenVersionSuite extends BasicSuite {
     assert(Version("2.7.3.RC1") === Version(2, 7, 3, "RC1", 0))
     assert(Version("5.0_ALPHA") === Version(5, 0, 0, "ALPHA", 0))
     assert(Version("2.0b4") === Version(2, 0, 0, "b4", 0))
+    assert(Version("2.4.public_draft") == Version(2, 4, 0, "public_draft", 0))
   }
 
   test("wildcard") {
