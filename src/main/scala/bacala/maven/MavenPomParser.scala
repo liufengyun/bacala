@@ -134,6 +134,7 @@ object PomFile {
 class PomFile(currentPackage: MavenPackage, node: Node) {
   var parent: PomFile  = null
   var modules: Seq[PomFile] = null
+  var aggregator: PomFile = null // aggregator of current PomFile
 
   def groupId = currentPackage.groupId
   def artifactId = currentPackage.artifactId
@@ -142,8 +143,8 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     *  parse the pom file and return the dependency constraints as a set of package sets
     */
-  def parse(scope: Scope = COMPILE, includeParent: Boolean = true, includeModules: Boolean = true): Set[Set[MavenPackage]] = {
-    if (includeParent && hasParent) parent = loadParent
+  def parse(scope: Scope = COMPILE, includeModules: Boolean = true): Set[Set[MavenPackage]] = {
+    if (hasParent) parent = loadParent
     if (includeModules && hasModules) modules = loadModules
 
     var constraints = (for {
@@ -153,9 +154,11 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
       depSet <- parseDependency(dep)
     } yield depSet).toSet
 
-    // TODO : fix the infinite loop here!
-    if (parent != null) constraints = parent.parse(scope, true, false) ++ constraints
-    if (modules != null) constraints = (modules :\ constraints) { (m, acc) => m.parse(scope, m.parent != this, true) ++ acc }
+    if (parent != null && aggregator != parent)
+      constraints = parent.parse(scope, false) ++ constraints
+
+    if (modules != null)
+      constraints = (modules :\ constraints) { (m, acc) => m.parse(scope, true) ++ acc }
 
     constraints
   }
@@ -209,7 +212,11 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     val artifactId = (node \ "parent" \ "artifactId").text
     val version = (node \ "parent" \ "version").text
 
-    PomFile(MavenPackage(groupId, artifactId, version))
+    val pom = PomFile(MavenPackage(groupId, artifactId, version))
+
+    if (pom == null) println("Error: failed to load parent POM for " + currentPackage)
+
+    pom
   }
 
   /**
@@ -225,7 +232,11 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
       val artifactId = module.text
       // groupId and version are the same as the aggregating project
       val pom = PomFile(MavenPackage(groupId, artifactId, version))
-      if (pom == null) println("Error: failed to load module " + artifactId + " for " + currentPackage)
+      if (pom == null)
+        println("Error: failed to load module " + artifactId + " for " + currentPackage)
+      else
+        pom.aggregator = this
+
       pom
     }).filter(_ != null)
   }
