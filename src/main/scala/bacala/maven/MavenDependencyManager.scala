@@ -8,7 +8,7 @@ object MavenDependencyManager extends DependencyManager {
 
   override def resolve(initial: ConstraintsT): Result = {
     val repo = new MavenRepository()
-    repo.initialize(initial, MavenFetcher(_) map (xml => MavenPomParser(xml, Scope.COMPILE)))
+    repo.initialize(initial, MavenPomParser(_))
     println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))
     println("*****all conflicts in repository******")
@@ -32,7 +32,7 @@ object MavenDependencyManager extends DependencyManager {
       val content = source.mkString
       source.close()
 
-      val result = resolve(MavenPomParser(content))
+      val result = resolve(MavenPomParser(content, Scope.COMPILE))
     }
   }
 }

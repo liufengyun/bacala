@@ -69,6 +69,42 @@ object Property {
 }
 
 /**
+  * The companion object PomFile does caching internally
+  *
+  * This object also breaks parent/sub-module loop
+  */
+object PomFile {
+  var cache = Map[MavenPackage, PomFile]()
+
+  def apply(pkg: MavenPackage) = {
+    if (cache.contains(pkg)) cache(pkg) else
+    MavenFetcher(pkg) match {
+      case Some(spec) =>
+        val pom = new PomFile(pkg, XML.loadString(spec))
+        cache = cache + (pkg -> pom)
+        pom
+      case None =>
+        println("Error: failed to get POM for " + pkg)
+        null
+    }
+  }
+
+  def apply(spec: String) = {
+    val node = XML.loadString(spec)
+    val artifactId = (node \ "artifactId").text
+    // version and groupId may be inherited from /project/parent
+    val groupId = Property.resolve(node)("project.groupId")
+    val version = Property.resolve(node)("project.version")
+
+    val pkg = MavenPackage(groupId, artifactId, version)
+    val pom = new PomFile(pkg, node)
+    cache = cache + (pkg -> pom)
+
+    pom
+  }
+}
+
+/**
   * Parse POM XML file into constraint objects
   *
   * Standard Meaning of Version Specification
@@ -95,36 +131,47 @@ object Property {
   *
   */
 
-
-class PomFile(node: Node) {
-  val groupId = (node \ "groupId").text
-  val artifactId = (node \ "artifactId").text
-  val version = (node \ "version").text
-
+class PomFile(currentPackage: MavenPackage, node: Node) {
   var parent: PomFile  = null
+  var modules: Seq[PomFile] = null
 
+  def groupId = currentPackage.groupId
+  def artifactId = currentPackage.artifactId
+  def version = currentPackage.version
+
+  /**
+    *  parse the pom file and return the dependency constraints as a set of package sets
+    */
   def parse(scope: Scope = COMPILE): Set[Set[MavenPackage]] = {
     if (hasParent) parent = getParent
+    if (hasModules) modules = getModules
 
-    val constraints = for {
+    var constraints = (for {
       dep <- node \ "dependencies" \ "dependency"
       scopeP = (dep \ "scope").text
       if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
       depSet <- parseDependency(dep)
-    } yield depSet
+    } yield depSet).toSet
 
-    if (parent == null) constraints.toSet else (parent.parse(scope) ++ constraints).toSet
+    if (parent != null) constraints = parent.parse(scope) ++ constraints
+    if (modules != null) constraints = (modules :\ constraints) { (m, acc) => m.parse(scope) ++ acc }
+
+    constraints
   }
 
-  // resolve version which can be a property, a range, or defined in parent file
+  /**
+    * resolve version which can be a property, a range, or defined in parent file
+    */
   private def resolveVersion(groupId: String, artifactId: String, ver: String) = ver match {
     case Property(prop) => VersionRange(Property.resolve(node)(prop))
     case VersionRange(range) => range
     case "" if parent != null => parent.managedVersionFor(groupId, artifactId)  // version specified in parent POM file
-    case ver => throw new InvalidVersionFormat("Unknown version format: " + ver)
+    case ver => throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
-  // resolve artifact version specified in dependencyManagement section
+  /**
+    * resolve artifact version specified in dependencyManagement section
+    */
   def managedVersionFor(groupId: String, artifactId: String): VersionRange = {
     object SameArtifact {
       def unapply(dep: Node): Option[VersionRange] = {
@@ -143,32 +190,55 @@ class PomFile(node: Node) {
     } match {
       case Some(v) => v
       case None =>
-        println("Error: can't find version specification in parent for " + groupId + ":" + artifactId)
+        println("Error: can't find version specification in parent for " + groupId + ":" + artifactId + " in " + currentPackage)
         defaultVersion(groupId, artifactId)
     }
   }
 
+  /**
+    * whether current POM file has a <parent> section
+    */
   private def hasParent = (node \ "parent").length > 0
 
+  /**
+    * parse the parent section, download POM for parent and create a new PomFile instance
+    */
   private def getParent = {
     val groupId = (node \ "parent" \ "groupId").text
     val artifactId = (node \ "parent" \ "artifactId").text
     val version = (node \ "parent" \ "version").text
 
-    MavenFetcher(MavenPackage(groupId, artifactId, version)) match {
-      case Some(spec) => new PomFile(XML.loadString(spec))
-      case None =>
-        println("Error: failed to get parent POM for " + MavenPackage(groupId, artifactId, version))
-        null
+    PomFile(MavenPackage(groupId, artifactId, version))
+  }
+
+  /**
+    * whether current POM file has a <modules> section
+    */
+  private def hasModules = (node \ "modules").length > 0
+
+  /**
+    * parse the parent section, download POM for each module and create a new PomFile instance
+    */
+  private def getModules = {
+    (node \ "modules" \ "module") map { module =>
+      val artifactId = module.text
+      // groupId and version are the same as the aggregating project
+      PomFile(MavenPackage(groupId, artifactId, version))
     }
   }
 
-  // if there's no parent section, use the default version
+  /**
+    * if there's no default version for an artifact, use the default version
+    */
   def defaultVersion(groupId: String, artifactId: String): VersionRange = {
     // SimpleRange(Version(0, 0, 0, "", 0))
     throw new InvalidVersionFormat("version unspecified for " + groupId + ":" + artifactId)
   }
 
+  /**
+    * parse a single dependency node in /project/dependencies into a set of packages
+    * as disjunctive constraints
+    */
   private def parseDependency(dep: Node) = {
     val groupId = (dep \ "groupId").text
     val artifactId = (dep \ "artifactId").text
@@ -192,6 +262,9 @@ class PomFile(node: Node) {
     }
   }
 
+  /**
+    * TODO: use cache to avoid duplicate HTTP request and parsing
+    */
   private def getAllVersions(groupId:String, artifactId:String) = {
     MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
       (XML.loadString(metaData) \ "versioning" \ "versions" \ "version") map (_.text)
@@ -204,12 +277,19 @@ class PomFile(node: Node) {
 }
 
 
-object MavenPomParser extends ((String, Scope) => Set[Set[MavenPackage]]) {
-  type VersionResolver = (String, String) => VersionRange
-  type PropertyResolver = String => String
+object MavenPomParser {
+  /**
+    * Used to parse a given POM file
+    */
+  def apply(spec: String, scope: Scope) = {
+    PomFile(spec).parse(scope).toSet
+  }
 
-  override def apply(spec: String, scope: Scope = COMPILE) = {
-    val pom = new PomFile(XML.loadString(spec))
-    pom.parse(scope).toSet
+  /**
+    * Fetch POM from repository and parse
+    */
+  def apply(pkg: MavenPackage, scope: Scope = COMPILE) = {
+    val pom = PomFile(pkg)
+    if (pom != null) Some(pom.parse(scope).toSet) else None
   }
 }

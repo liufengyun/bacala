@@ -9,6 +9,9 @@ class MavenPomParserSuite extends BasicSuite {
     val deps = MavenPomParser(
       """
       <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
           <dependencies>
               <dependency>
                   <groupId>org.scala-lang</groupId>
@@ -22,7 +25,8 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """)
+      """,
+      Scope.COMPILE)
 
     assert(deps === Set(
       Set(
@@ -41,6 +45,9 @@ class MavenPomParserSuite extends BasicSuite {
     val deps = MavenPomParser(
       """
       <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
           <dependencies>
               <dependency>
                   <groupId>org.scala-lang</groupId>
@@ -54,7 +61,8 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """)
+      """,
+      Scope.COMPILE)
 
     assert(deps === Set(
       Set(
@@ -74,6 +82,9 @@ class MavenPomParserSuite extends BasicSuite {
     val deps = MavenPomParser(
       """
       <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
           <dependencies>
               <dependency>
                   <groupId>org.scala-lang</groupId>
@@ -81,7 +92,8 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """)
+      """,
+      Scope.COMPILE)
 
     assert(deps.exists { set =>
       Set(
