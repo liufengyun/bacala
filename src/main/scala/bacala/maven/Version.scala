@@ -35,21 +35,24 @@ class InvalidVersionFormat(msg: String) extends Exception(msg)
 object Version {
 
   // <major>.<minor>[.<revision>]([ -<qualififer> ] | [ -<build> ])
-  val simple     =   """^(\d+)\.(\d+)$""".r
-  val triple     =   """^(\d+)\.(\d+)\.(\d+)$""".r
-  val build      =   """^(\d+)\.(\d+)\.(\d+)-(\d+)$""".r
-  val qualifier  =   """^(\d+)\.(\d+)\.(\d+)-(\w+)$""".r
-  val full       =   """^(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)$""".r
+  val simple     =   """(\d+)\.(\d+)""".r
+  val triple     =   """(\d+)\.(\d+)\.(\d+)""".r
+  val build      =   """(\d+)\.(\d+)\.(\d+)-(\d+)""".r
+  val qualifier  =   """(\d+)\.(\d+)\.(\d+)-(\w+)""".r
+  val full       =   """(\d+)\.(\d+)\.(\d+)-(\w+)-(\d+)""".r
 
   // unstandard: 1.0-b1, 1.0-b1.1
-  val simple2    =   """^(\d+)\.(\d+)-(.+)$""".r
+  val simple2    =   """(\d+)\.(\d+)-(.+)""".r
 
   // unstandard: 2.7.3.RC1
-  val druple     =   """^(\d+)\.(\d+)\.(\d+)\.(\w+)$""".r
+  val druple     =   """(\d+)\.(\d+)\.(\d+)\.(\w+)""".r
 
   // unstandard: 2.8.0.Beta1-RC1
   // 2.10.0-M1-virtualized.rdev-4217-2012-01-24-g9118644
-  val wildcard   =   """^(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)$""".r
+  val wildcard   =   """(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)""".r
+
+  // unstandard: 1
+  val number     =   """(\d+)""".r
 
   def apply(ver: String): Version = ver match {
     case simple(major, minor) =>
@@ -68,6 +71,8 @@ object Version {
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
     case wildcard(major, minor, revision, qualifier) =>
       Version(major.toInt, minor.toInt, revision.toInt, qualifier, 0)
+    case number(major) =>
+      Version(major.toInt, 0, 0, "", 0)
     case _ => throw new InvalidVersionFormat("Unknown version format: " + ver)
   }
 
