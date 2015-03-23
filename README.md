@@ -21,3 +21,7 @@ The input XML is a POM file.
 ## Test
 
 `sbt test`
+
+## Reference
+
+- [Maven: The Complete Reference](http://books.sonatype.com/mvnref-book/reference/index.html)
