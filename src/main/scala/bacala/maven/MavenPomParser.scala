@@ -142,9 +142,9 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     *  parse the pom file and return the dependency constraints as a set of package sets
     */
-  def parse(scope: Scope = COMPILE): Set[Set[MavenPackage]] = {
-    if (hasParent) parent = getParent
-    if (hasModules) modules = getModules
+  def parse(scope: Scope = COMPILE, includeParent: Boolean = true, includeModules: Boolean = true): Set[Set[MavenPackage]] = {
+    if (includeParent && hasParent) parent = loadParent
+    if (includeModules && hasModules) modules = loadModules
 
     var constraints = (for {
       dep <- node \ "dependencies" \ "dependency"
@@ -153,8 +153,9 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
       depSet <- parseDependency(dep)
     } yield depSet).toSet
 
-    if (parent != null) constraints = parent.parse(scope) ++ constraints
-    if (modules != null) constraints = (modules :\ constraints) { (m, acc) => m.parse(scope) ++ acc }
+    // TODO : fix the infinite loop here!
+    if (parent != null) constraints = parent.parse(scope, true, false) ++ constraints
+    if (modules != null) constraints = (modules :\ constraints) { (m, acc) => m.parse(scope, m.parent != this, true) ++ acc }
 
     constraints
   }
@@ -203,7 +204,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     * parse the parent section, download POM for parent and create a new PomFile instance
     */
-  private def getParent = {
+  private def loadParent = {
     val groupId = (node \ "parent" \ "groupId").text
     val artifactId = (node \ "parent" \ "artifactId").text
     val version = (node \ "parent" \ "version").text
@@ -219,20 +220,22 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     * parse the parent section, download POM for each module and create a new PomFile instance
     */
-  private def getModules = {
-    (node \ "modules" \ "module") map { module =>
+  private def loadModules = {
+    (node \ "modules" \ "module").map({module =>
       val artifactId = module.text
       // groupId and version are the same as the aggregating project
-      PomFile(MavenPackage(groupId, artifactId, version))
-    }
+      val pom = PomFile(MavenPackage(groupId, artifactId, version))
+      if (pom == null) println("Error: failed to load module " + artifactId + " for " + currentPackage)
+      pom
+    }).filter(_ != null)
   }
 
   /**
     * if there's no default version for an artifact, use the default version
     */
   def defaultVersion(groupId: String, artifactId: String): VersionRange = {
-    // SimpleRange(Version(0, 0, 0, "", 0))
-    throw new InvalidVersionFormat("version unspecified for " + groupId + ":" + artifactId)
+    println("Warning: version unspecified for " + groupId + ":" + artifactId + " in " + currentPackage)
+    SimpleRange(Version(0, 0, 0, "", 0))
   }
 
   /**
