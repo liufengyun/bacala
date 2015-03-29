@@ -76,19 +76,16 @@ object Property {
   * This object also breaks parent/sub-module loop
   */
 object PomFile {
+  // TODO : thread-safe & abstraction of caching
   var cache = Map[MavenPackage, PomFile]()
 
   def apply(pkg: MavenPackage) = {
-    if (cache.contains(pkg)) cache(pkg) else
-    MavenFetcher(pkg) match {
-      case Some(spec) =>
+    if (cache.contains(pkg)) Some(cache(pkg)) else
+      MavenFetcher(pkg) map { spec =>
         val pom = new PomFile(pkg, XML.loadString(spec))
         cache = cache + (pkg -> pom)
         pom
-      case None =>
-        println("Error: failed to get POM for " + pkg)
-        null
-    }
+      }
   }
 
   def apply(spec: String) = {
@@ -142,22 +139,17 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     *  parse the pom file and return the dependency constraints as a set of package sets
     */
-  def parse(scope: Scope = COMPILE, includeModules: Boolean = true): Set[Set[MavenPackage]] = {
+  def parse(includeModules: Boolean = true): Iterable[MavenDependency] = {
     if (hasParent) parent = loadParent
     if (includeModules && hasModules) modules = loadModules
 
-    var constraints = (for {
-      dep <- node \ "dependencies" \ "dependency"
-      scopeP = (dep \ "scope").text.trim
-      if  (scopeP.isEmpty && scope == COMPILE) || scope == scopeP // compile is the default
-      depSet <- parseDependency(dep)
-    } yield depSet).toSet
+    var constraints = (node \ "dependencies" \ "dependency") map (parseDependency)
 
     if (parent != null && aggregator != parent)
-      constraints = parent.parse(scope, false) ++ constraints
+      constraints = constraints ++ parent.parse(false)
 
     if (modules != null)
-      constraints = (modules :\ constraints) { (m, acc) => m.parse(scope, true) ++ acc }
+      constraints = (modules :\ constraints) { (m, acc) => acc ++ m.parse(true) }
 
     constraints
   }
@@ -169,7 +161,9 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     case Property(prop) => VersionRange(Property.resolve(node)(prop))
     case VersionRange(range) => range
     case "" if parent != null => parent.managedVersionFor(groupId, artifactId)  // version specified in parent POM file
-    case ver => throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
+    case ver =>
+      defaultVersion(groupId, artifactId)
+      // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
   /**
@@ -211,11 +205,12 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
-    val pom = PomFile(MavenPackage(groupId, artifactId, version))
-
-    if (pom == null) println("Error: failed to load parent POM for " + currentPackage)
-
-    pom
+    PomFile(MavenPackage(groupId, artifactId, version)) match {
+      case Some(pom) => pom
+      case None =>
+        println("Error: failed to load parent POM for " + currentPackage)
+        null
+    }
   }
 
   /**
@@ -230,13 +225,14 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
-      val pom = PomFile(MavenPackage(groupId, artifactId, version))
-      if (pom == null)
-        println("Error: failed to load module " + artifactId + " for " + currentPackage)
-      else
-        pom.aggregator = this
-
-      pom
+      PomFile(MavenPackage(groupId, artifactId, version)) match {
+        case Some(pom) =>
+          pom.aggregator = this
+          pom
+        case None =>
+          println("Error: failed to load module " + artifactId + " for " + currentPackage)
+          null
+      }
     }).filter(_ != null)
   }
 
@@ -249,63 +245,47 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   }
 
   /**
-    * parse a single dependency node in /project/dependencies into a set of packages
-    * as disjunctive constraints
+    * parse a single dependency node in /project/dependencies
     */
   private def parseDependency(dep: Node) = {
     val groupId = (dep \ "groupId").text.trim
     val artifactId = (dep \ "artifactId").text.trim
+    val scopeText = (dep \ "scope").text.trim
+    val scope = if (scopeText.isEmpty) COMPILE else Scope(scopeText)
+    val optional = (dep \ "optional").text.trim == "true"
 
-    // version range specification can be a property
+    // version range specification can be a complex
     val range = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
 
-    MetaFile(groupId, artifactId) map { versions =>
-      val compatibleVersions = versions.filter(s => range.contains(Version(s)))
-      compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
-    }
+    // parse exclusions
+    val exclusions = (dep \ "exclusions" \ "exclusion").map(parseExclusion _)
+
+    MavenDependency(groupId, artifactId, range, exclusions, scope, optional)
+  }
+
+  /**
+    * parse exclusion in dependency
+    */
+  private def parseExclusion(exclusion: Node) = {
+    val groupId = (exclusion \ "groupId").text.trim
+    val artifactId = (exclusion \ "artifactId").text.trim
+
+    Exclusion(groupId, artifactId)
   }
 }
-
-/**
-  * The object MetaFile is the interface to get all version definitions for
-  * an artifact. It does caching internally.
-  */
-object MetaFile {
-  var cache = Map[String, Seq[String]]()
-
-  def apply(groupId: String, artifactId: String): Option[Seq[String]] = {
-    if (cache.contains(groupId + artifactId)) Some(cache(groupId + artifactId)) else
-
-    MavenFetcher.getMetaData(groupId, artifactId) map { metaData =>
-      val versions = (XML.loadString(metaData) \ "versioning" \ "versions" \ "version").map(_.text.trim).filter { ver =>
-        // filter old, illegal version numbers
-        if (Version.unapply(ver).nonEmpty) true else {
-          println("Error: unknown version format " + ver + " in meta data XML of " +
-            groupId + ":" +artifactId)
-          false
-        }
-      }
-      cache = cache + ((groupId + artifactId) -> versions)
-
-      versions
-    }
-  }
-}
-
 
 object MavenPomParser {
   /**
     * Used to parse a given POM file
     */
-  def apply(spec: String, scope: Scope) = {
-    PomFile(spec).parse(scope).toSet
+  def apply(spec: String): Iterable[MavenDependency] = {
+    PomFile(spec).parse()
   }
 
   /**
     * Fetch POM from repository and parse
     */
-  def apply(pkg: MavenPackage, scope: Scope = COMPILE) = {
-    val pom = PomFile(pkg)
-    if (pom != null) Some(pom.parse(scope).toSet) else None
+  def apply(pkg: MavenPackage): Option[Iterable[MavenDependency]] = {
+    PomFile(pkg).map(_.parse())
   }
 }

@@ -12,7 +12,7 @@ object Scope extends Enumeration {
   val SYSTEM = Value("system")
   val PROVIDED = Value("provided")
 
-  def fromString(s: String): Scope = {
+  def apply(s: String): Scope = {
     this.values.find(v => v.toString().toLowerCase() == s.toLowerCase()) match {
       case Some(scope) => scope
       case None => {

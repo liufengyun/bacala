@@ -1,14 +1,14 @@
 package bacala.maven
 
-import bacala._
+import bacala.core._
 
 object MavenDependencyManager extends DependencyManager {
-  type Result = Set[MavenPackage]
-  type ConstraintsT = Set[Set[MavenPackage]]
+  type PackageT = MavenPackage
+  type DependencyT = MavenDependency
 
-  override def resolve(initial: ConstraintsT): Result = {
-    val repo = new MavenRepository()
-    repo.initialize(initial, MavenPomParser(_))
+  override def resolve(initial: Iterable[DependencyT]): Iterable[PackageT] = {
+    val repo = new MavenRepository(initial)
+    repo.construct(Scope.COMPILE)
     println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))
     println("*****all conflicts in repository******")
@@ -32,7 +32,7 @@ object MavenDependencyManager extends DependencyManager {
       val content = source.mkString
       source.close()
 
-      val result = resolve(MavenPomParser(content, Scope.COMPILE))
+      val result = resolve(MavenPomParser(content))
     }
   }
 }

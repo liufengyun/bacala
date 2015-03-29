@@ -25,19 +25,11 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """,
-      Scope.COMPILE)
+      """)
 
-    assert(deps === Set(
-      Set(
-        MavenPackage("org.scala-lang", "scala-library", "2.11.3"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.4"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.5")
-      ),
-      Set(
-        MavenPackage("com.typesafe", "config", "1.2.0"),
-        MavenPackage("com.typesafe", "config", "1.2.1")
-      )
+    assert(deps === Seq(
+      MavenDependency("org.scala-lang", "scala-library", VersionRange("[2.11.3, 2.11.6)"),   List[Exclusion](), Scope.COMPILE, false),
+      MavenDependency("com.typesafe", "config", VersionRange("(1.1.1, 1.2.1]"),   List[Exclusion](), Scope.COMPILE, false)
     ))
   }
 
@@ -60,10 +52,11 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """,
-      Scope.COMPILE)
+      """)
 
-    assert(deps === Set(Set(MavenPackage("org.scala-lang", "scala-library", "2.11.3"))))
+    assert(deps === Seq(
+      MavenDependency("org.scala-lang", "scala-library", VersionRange("[2.11.3, 2.11.3]"),   List[Exclusion](), Scope.COMPILE, false)
+    ))
   }
 
 
@@ -87,20 +80,11 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """,
-      Scope.COMPILE)
+      """)
 
-    assert(deps === Set(
-      Set(
-        MavenPackage("org.scala-lang", "scala-library", "2.11.1"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.2"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.4"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.5")
-      ),
-      Set(
-        MavenPackage("com.typesafe", "config", "1.2.0"),
-        MavenPackage("com.typesafe", "config", "1.2.1")
-      )
+    assert(deps === Seq(
+      MavenDependency("org.scala-lang", "scala-library", VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[Exclusion](), Scope.COMPILE, false),
+      MavenDependency("com.typesafe", "config", VersionRange("(1.1.1, 1.2.1]"),   List[Exclusion](), Scope.COMPILE, false)
     ))
   }
 
@@ -118,17 +102,11 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """,
-      Scope.COMPILE)
+      """)
 
-    assert(deps.exists { set =>
-      Set(
-        MavenPackage("org.scala-lang", "scala-library", "2.11.1"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.2"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.4"),
-        MavenPackage("org.scala-lang", "scala-library", "2.11.5")
-      ).subsetOf(set)
-    })
+    assert(deps === Seq(
+      MavenDependency("org.scala-lang", "scala-library", VersionRange("0.0.0"),   List[Exclusion](), Scope.COMPILE, false)
+    ))
   }
 
   test("version specification via property") {
