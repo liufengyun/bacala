@@ -123,10 +123,7 @@ object PomFile {
   * TODO
   *
   *  - exclusions
-  *  - dependency in parent projects
-  *  - version specified in parent dependencyManagement section
   *  - properties
-  *  - multi-module/agregating projects
   *
   * Reference: [1] http://maven.apache.org/pom.html
   *            [2] http://docs.codehaus.org/display/MAVEN/Dependency+Mediation+and+Conflict+Resolution

@@ -22,6 +22,25 @@ The input XML is a POM file.
 
 `sbt test`
 
+## To do list
+
+- [ ] support POM configuration file
+  - [x] support different version formats(including unstandard)
+  - [x] support version ranges
+  - [x] support scopes in POM file
+  - [x] support path properties and variable properties in version constraint
+  - [x] support reading version constraint from parent POM file
+  - [x] inherit dependencies from parent POM file
+  - [x] support aggregating dependencies from multiple mudules
+  - [ ] support excludes in POM
+  - [ ] support SNAPSHOT versioning
+- [ ] support multiple resolvers
+- [ ] support Ivy configuration file
+  - [ ] support force a specific package
+  - [ ] support configuration
+- [ ] support download POM via Futures in parallel
+- [ ] resolve dependency via SAT solver
+
 ## Reference
 
 - [Maven: The Complete Reference](http://books.sonatype.com/mvnref-book/reference/index.html)
