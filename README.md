@@ -32,7 +32,7 @@ The input XML is a POM file.
   - [x] support reading version constraint from parent POM file
   - [x] inherit dependencies from parent POM file
   - [x] support aggregating dependencies from multiple mudules
-  - [ ] support excludes in POM
+  - [x] support excludes in POM
   - [ ] support SNAPSHOT versioning
 - [ ] support multiple resolvers
 - [ ] support Ivy configuration file
@@ -40,6 +40,9 @@ The input XML is a POM file.
   - [ ] support configuration
 - [ ] support download POM via Futures in parallel
 - [ ] resolve dependency via SAT solver
+- [ ] resolve result visualization in html
+  - [ ] generate dependency graph
+  - [ ] generate logs
 
 ## Reference
 
