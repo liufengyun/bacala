@@ -17,6 +17,16 @@ case class Exclusion(groupId:String, artifactId:String)
 case class MavenDependency(groupId:String, artifactId:String, versionRange: VersionRange, exclusions: Iterable[Exclusion], scope: Scope, optional:Boolean) extends Dependency {
   type PackageT = MavenPackage
 
+  // whether current dependency is in the given scope
+  def inScope(scope: Scope) = scope == this.scope
+
+  // whether current dependency can be excluded
+  def canExclude(exclusions: Iterable[Exclusion]) = exclusions.exists { exclude =>
+    (exclude.groupId == this.groupId && exclude.artifactId == this.artifactId) ||
+    (exclude.groupId == this.groupId && exclude.artifactId == "*") ||
+    (exclude.groupId == "*" && exclude.artifactId == "*")
+  }
+
   // packages compatible with this dependency
   def resolve: Option[Iterable[PackageT]] = {
     MetaFile(groupId, artifactId) map { versions =>
@@ -48,15 +58,17 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
       if dep.scope == scope
       set <- dep.resolve
       p <- set
-    } resolve(p, scope)
+    } resolve(p, scope, dep.exclusions)
 
     createConflicts
   }
 
   // recursively fetch the dependency closure
-  def resolve(p: MavenPackage, scope: Scope): Unit = {
+  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[Exclusion]): Unit = {
     if (!failureSet.contains(p) && directDependencies.putIfAbsent(p, Set()) == None) // atomic
-      MavenPomParser(p) map { deps => deps.filter(_.scope == scope) } match {
+      MavenPomParser(p) map { deps => deps.filter(_.inScope(scope)).filter(dep =>
+        !dep.canExclude(excludes)
+      )} match {
         case Some(deps) =>
           directDependencies += p -> deps
 
@@ -67,7 +79,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
 
           dependencies += p -> sets
 
-          for (set <- sets; q <- set) resolve(q, scope)
+          for ((set, dep) <- sets zip deps; q <- set) resolve(q, scope, dep.exclusions ++ excludes)
         case None =>
           directDependencies -= p
           failureSet += p -> ()
