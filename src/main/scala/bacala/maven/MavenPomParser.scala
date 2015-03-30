@@ -33,6 +33,16 @@ object Property {
   val propertyPat = """\s*\$\{\s*([A-Za-z0-9.-]+)\s*\}\s*""".r
 
   def resolve(node: Node)(property: String): String = {
+    val res = doResolve(node, property)
+
+    // property can reference another property
+    res match {
+      case Property(prop) => resolve(node)(prop)
+      case _ => res
+    }
+  }
+
+  private def doResolve(node: Node, property: String): String = {
     // first try variable property
     val res = resolveVariable(node, property) // variable property
 
@@ -156,7 +166,13 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
     case Property(prop) => VersionRange(Property.resolve(node)(prop))
     case VersionRange(range) => range
-    case "" if parent != null => parent.managedVersionFor(artifact)  // version specified in parent POM file
+    case "" if parent != null =>
+      parent.managedVersionFor(artifact) match {  // version specified in parent POM file
+        case Some(ver) => ver
+        case None =>
+          println("Warning: can't find version specification in parent for " + artifact + " in the parent POM of " + currentPackage)
+          defaultVersion(artifact)
+      }
     case ver =>
       defaultVersion(artifact)
       // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
@@ -165,27 +181,13 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     * resolve artifact version specified in dependencyManagement section
     */
-  def managedVersionFor(artifact: MavenArtifact): VersionRange = {
-    object SameArtifact {
-      def unapply(dep: Node): Option[VersionRange] = {
-        val gid = (dep \ "groupId").text.trim
-        val aid = (dep \ "artifactId").text.trim
-        val ver = resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
-
-        if (artifact == MavenArtifact(gid, aid))
-          Some(ver)
-        else None
-      }
-    }
-
-    (node \ "dependencyManagement" \ "dependencies" \ "dependency") collectFirst {
-      case SameArtifact(ver) => ver
-    } match {
-      case Some(v) => v
-      case None =>
-        println("Error: can't find version specification in parent for " + artifact + " in " + currentPackage)
-        defaultVersion(artifact)
-    }
+  private def managedVersionFor(artifact: MavenArtifact): Option[VersionRange] = {
+    val deps = (node \ "dependencyManagement" \ "dependencies" \ "dependency")
+    deps.filter { dep =>
+      artifact == MavenArtifact((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
+    }.map { dep =>
+      resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
+    }.headOption
   }
 
   /**

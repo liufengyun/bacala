@@ -129,6 +129,11 @@ scala-library
     assert(Property.resolve(XML.loadString(xml))("x.y") === "56")
   }
 
+  test("test  property reference another property") {
+    val xml = """<project><properties><x>56</x><y>${x}</y></properties></project>"""
+    assert(Property.resolve(XML.loadString(xml))("y") === "56")
+  }
+
   test("test variable property with dash in name") {
     val xml = """<project><properties><x-y>56</x-y></properties></project>"""
     assert(Property.unapply("${x-y}").nonEmpty)
