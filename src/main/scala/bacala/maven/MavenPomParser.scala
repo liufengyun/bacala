@@ -87,13 +87,15 @@ object Property {
   * This object also breaks parent/sub-module loop
   */
 object PomFile extends Cache[MavenPackage, Option[PomFile]] {
-  def apply(pkg: MavenPackage) = fetch(pkg, doWork(pkg))
+  type Fetcher = MavenPackage => Option[String]
 
-  private def doWork(pkg: MavenPackage) = MavenFetcher(pkg).map { spec =>
-    new PomFile(pkg, XML.loadString(spec))
+  def apply(pkg: MavenPackage)(implicit fetcher: Fetcher) = fetch(pkg, doWork(pkg, fetcher))
+
+  private def doWork(pkg: MavenPackage, fetcher: Fetcher) = fetcher.apply(pkg).map { spec =>
+    new PomFile(pkg, XML.loadString(spec))(fetcher)
   }
 
-  def apply(spec: String) = {
+  def apply(spec: String)(implicit fetcher: Fetcher) = {
     val node = XML.loadString(spec)
     val artifactId = (node \ "artifactId").text.trim
     // version and groupId may be inherited from /project/parent
@@ -101,7 +103,7 @@ object PomFile extends Cache[MavenPackage, Option[PomFile]] {
     val version = Property.resolve(node)("project.version")
 
     val pkg = MavenPackage(MavenArtifact(groupId, artifactId), version)
-    val pom = new PomFile(pkg, node)
+    val pom = new PomFile(pkg, node)(fetcher)
 
     fetch(pkg, Some(pom))
 
@@ -133,7 +135,7 @@ object PomFile extends Cache[MavenPackage, Option[PomFile]] {
   *
   */
 
-class PomFile(currentPackage: MavenPackage, node: Node) {
+class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenPackage => Option[String]) {
   var parent: PomFile  = null
   var modules: Seq[PomFile] = null
   var aggregator: PomFile = null // aggregator of current PomFile
@@ -273,17 +275,19 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
 }
 
 object MavenPomParser extends Cache[MavenPackage, Option[Iterable[MavenDependency]]] {
+  type Fetcher = MavenPackage => Option[String]
+
   /**
     * Used to parse a given POM file
     */
-  def apply(spec: String): Iterable[MavenDependency] = {
+  def apply(spec: String)(implicit fetcher: Fetcher): Iterable[MavenDependency] = {
     PomFile(spec).parse()
   }
 
   /**
     * Fetch POM from repository and parse
     */
-  def apply(pkg: MavenPackage): Option[Iterable[MavenDependency]] = {
+  def apply(pkg: MavenPackage)(implicit fetcher: Fetcher): Option[Iterable[MavenDependency]] = {
     fetch(pkg, PomFile(pkg).map(_.parse()))
   }
 }

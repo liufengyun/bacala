@@ -11,6 +11,7 @@ package bacala.maven
 
 import scalaj.http._
 
+
 object MavenFetcher extends (MavenPackage => Option[String]) {
   val MavenRepoBase = "http://repo1.maven.org/maven2"
 

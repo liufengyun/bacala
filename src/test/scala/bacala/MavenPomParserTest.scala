@@ -25,7 +25,7 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """)
+      """)(MavenFetcher)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
@@ -52,7 +52,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)
+      """)(MavenFetcher)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.3]"),   List[MavenArtifact](), Scope.COMPILE, false)
@@ -80,7 +80,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)
+      """)(MavenFetcher)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
@@ -102,7 +102,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)
+      """)(MavenFetcher)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("0.0.0"),   List[MavenArtifact](), Scope.COMPILE, false)

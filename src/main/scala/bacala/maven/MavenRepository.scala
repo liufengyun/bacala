@@ -35,6 +35,12 @@ case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, 
       compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
     }
   }
+
+  // dependency graph building
+  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
+
+  }
+
 }
 
 case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {
@@ -54,6 +60,8 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
   private val failureSet = new TrieMap[PackageT, Unit]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
 
+  implicit val fetcher = MavenFetcher
+
   def construct(scope: Scope) = {
     for {
       dep <- initialDependencies
@@ -68,10 +76,10 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
   // recursively fetch the dependency closure
   // FIX: A ignores d in someplace, but A requires d in another place
   def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
-    if (!failureSet.contains(p) && directDependencies.putIfAbsent(p, Set()) == None) // atomic
-      MavenPomParser(p) map { deps => deps.filter(_.inScope(scope)).filter(dep =>
-        !dep.canExclude(excludes)
-      )} match {
+    if (!failureSet.contains(p) && !dependencies.contains(p))
+      MavenPomParser(p) map { deps =>
+        deps.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes))
+      } match {
         case Some(deps) =>
           directDependencies += p -> deps
 

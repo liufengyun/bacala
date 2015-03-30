@@ -32,7 +32,7 @@ object MavenDependencyManager extends DependencyManager {
       val content = source.mkString
       source.close()
 
-      val result = resolve(MavenPomParser(content))
+      val result = resolve(MavenPomParser(content)(MavenFetcher))
     }
   }
 }
