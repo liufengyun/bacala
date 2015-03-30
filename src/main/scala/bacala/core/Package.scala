@@ -37,7 +37,4 @@ abstract class Dependency {
   type PackageT <: Package
 
   def artifact: Artifact // this dependency is on which artifact
-
-  // packages compatible with this dependency
-  def resolve: Option[Iterable[PackageT]]
 }

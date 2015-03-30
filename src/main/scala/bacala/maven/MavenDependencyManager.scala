@@ -11,6 +11,10 @@ object PomFileParser extends MavenPomParser {
   val fetcher = PomFileCachedFetcher
 }
 
+object CachedMetaFileParser extends (MavenArtifact => Option[Iterable[Version]]) with Cache[MavenArtifact, Option[Iterable[Version]]] {
+  override def apply(arte: MavenArtifact) = fetch(arte, MavenFetcher.getMetaData(arte).map(meta => MetaFileParser(meta)))
+}
+
 object MavenDependencyManager extends DependencyManager {
   type PackageT = MavenPackage
   type DependencyT = MavenDependency
@@ -20,7 +24,7 @@ object MavenDependencyManager extends DependencyManager {
   }
 
   override def resolve(initial: Iterable[DependencyT]): Iterable[PackageT] = {
-    val repo = new MavenRepository(initial, Parser)
+    val repo = new MavenRepository(initial)(Parser, CachedMetaFileParser)
     repo.construct(Scope.COMPILE)
     println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))

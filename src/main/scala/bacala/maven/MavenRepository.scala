@@ -29,17 +29,13 @@ case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, 
   }
 
   // packages compatible with this dependency
-  def resolve: Option[Iterable[PackageT]] = {
-    MetaFile(artifact) map { versions =>
-      val compatibleVersions = versions.filter(s => versionRange.contains(Version(s)))
-      compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
-    }
+  def resolve(versions: Iterable[Version]): Iterable[PackageT] = {
+    val compatibleVersions = versions.filter(v => versionRange.contains(v))
+    compatibleVersions.map(v => MavenPackage(artifact, v.toString)).toSet
   }
 
   // dependency graph building
-  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
-
-  }
+  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Map[MavenPackage, Set[Set[MavenPackage]]] = ???
 
 }
 
@@ -48,9 +44,11 @@ case class MavenPackage(artifact: MavenArtifact, version:String) extends Package
 
   def artifactId = artifact.artifactId
   def groupId = artifact.groupId
+
+  def resolve(dependencies: Iterable[MavenDependency], excludes: Iterable[MavenArtifact]): Option[Set[Set[MavenPackage]]] = ???
 }
 
-class MavenRepository(initialDependencies: Iterable[MavenDependency], parser: MavenPackage => Option[Iterable[MavenDependency]]) extends Repository {
+class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[Version]]) extends Repository {
   type PackageT = MavenPackage
   type ConstraintsT = Set[Set[PackageT]]
   type DependencyT = MavenDependency
@@ -66,7 +64,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency], parser: Ma
     for {
       dep <- initialDependencies
       if dep.scope == scope
-      set <- dep.resolve
+      set <- metaParser(dep.artifact).map(dep.resolve(_))
       p <- set
     } resolve(p, scope, dep.exclusions)
 
@@ -85,7 +83,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency], parser: Ma
 
           val sets = (for {
             dep <- deps
-            set <- dep.resolve
+            set <- metaParser(dep.artifact).map(dep.resolve(_))
           } yield set.toSet).toSet
 
           dependencies += p -> sets
