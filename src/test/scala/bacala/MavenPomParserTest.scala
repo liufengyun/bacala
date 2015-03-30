@@ -336,6 +336,168 @@ scala-library
     ))
   }
 
+  test("test parent chain") {
+    val grandParent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parentParent</artifactId>
+          <version>1.2</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>test-lib</artifactId>
+                  <version>1.1.1</version>
+              </dependency>
+          </dependencies>
+          <modules>
+              <module>m1</module>
+              <module>m2</module>
+          </modules>
+      </project>
+      """
+
+    val parent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parent</artifactId>
+          <version>2.4</version>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>grandParent</artifactId>
+              <version>1.2</version>
+          </parent>
+          <modules>
+              <module>m1</module>
+              <module>m2</module>
+          </modules>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+                  <version>1.6</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val child = """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>m1</artifactId>
+              <version>2.4</version>
+              <parent>
+                  <groupId>org.test</groupId>
+                  <artifactId>parent</artifactId>
+                  <version>2.4</version>
+              </parent>
+              <dependencies>
+                  <dependency>
+                      <groupId>com.typesafe</groupId>
+                      <artifactId>config</artifactId>
+                      <version>(1.1.1, 1.2.1]</version>
+                  </dependency>
+              </dependencies>
+          </project>
+          """
+
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "grandParent"), "1.2") => Some(grandParent)
+        case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
+        case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(child)
+        case _ => None
+      }
+    }
+
+    val deps = parser(child)
+
+    assert(deps.toSet === Set(
+      MavenDependency(MavenArtifact("org.scala-lang", "test-lib"), VersionRange("1.1.1"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
+  test("POM with nested modules") {
+    val parent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parent</artifactId>
+          <version>2.4</version>
+          <modules>
+              <module>m1</module>
+          </modules>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+                  <version>1.6</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val m1 = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>m1</artifactId>
+          <version>2.4</version>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>2.4</version>
+          </parent>
+          <modules>
+              <module>m2</module>
+          </modules>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>(1.1.1, 1.2.1]</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val m2 = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>m2</artifactId>
+          <version>2.4</version>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>2.4</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>slick</artifactId>
+                  <version>(1.1.1, 1.2.1]</version>
+              </dependency>
+          </dependencies>
+      </project>
+          """
+
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
+        case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(m1)
+        case MavenPackage(MavenArtifact("org.test", "m2"), "2.4") => Some(m2)
+        case _ => None
+      }
+    }
+
+    val deps = parser(parent)
+
+    assert(deps.toSet === Set(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "slick"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
 
   test("parse POM with unspecified version") {
     val parser = new MavenPomParser { val fetcher = null }
