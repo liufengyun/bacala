@@ -39,6 +39,10 @@ class MavenVersionSuite extends BasicSuite {
     assert(Version("2.10.0-M1-virtualized.rdev-4217-2012-01-24-g9118644") === Version(2, 10, 0, "M1-virtualized.rdev-4217-2012-01-24-g9118644", 0))
   }
 
+  test("huge number") {
+    assert(Version.unapply("20030518103800") == None)
+  }
+
   test("single number") {
     assert(Version("5") === Version(5, 0, 0, "", 0))
     assert(Version("20") === Version(20, 0, 0, "", 0))

@@ -79,7 +79,7 @@ object Version {
   def unapply(s: String): Option[Version] = try {
     Some(apply(s))
   } catch {
-    case e: InvalidVersionFormat => None
+    case e: Exception => None
   }
 }
 
