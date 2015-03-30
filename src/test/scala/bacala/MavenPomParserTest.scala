@@ -216,6 +216,7 @@ scala-library
               <dependency>
                   <groupId>org.scala-lang</groupId>
                   <artifactId>scala-library</artifactId>
+                  <version>1.6</version>
               </dependency>
           </dependencies>
       </project>
@@ -266,17 +267,75 @@ scala-library
         case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
         case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(m1)
         case MavenPackage(MavenArtifact("org.test", "m2"), "2.4") => Some(m2)
+        case _ => None
       }
     }
 
     val deps = parser(parent)
 
-    assert(deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
+    assert(deps.toSet === Set(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
       MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false),
       MavenDependency(MavenArtifact("com.typesafe", "slick"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
+
+  test("child POM will not inherit modules in parent POM") {
+    val parent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parent</artifactId>
+          <version>2.4</version>
+          <modules>
+              <module>m1</module>
+              <module>m2</module>
+          </modules>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+                  <version>1.6</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val child = """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>m1</artifactId>
+              <version>2.4</version>
+              <parent>
+                  <groupId>org.test</groupId>
+                  <artifactId>parent</artifactId>
+                  <version>2.4</version>
+              </parent>
+              <dependencies>
+                  <dependency>
+                      <groupId>com.typesafe</groupId>
+                      <artifactId>config</artifactId>
+                      <version>(1.1.1, 1.2.1]</version>
+                  </dependency>
+              </dependencies>
+          </project>
+          """
+
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
+        case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(child)
+        case _ => None
+      }
+    }
+
+    val deps = parser(child)
+
+    assert(deps.toSet === Set(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
 
   test("parse POM with unspecified version") {
     val parser = new MavenPomParser { val fetcher = null }

@@ -115,7 +115,7 @@ object PomFile {
   *
   */
 
-class PomFile(currentPackage: MavenPackage, val node: Node)(implicit fetcher: MavenPackage => Option[String]) {
+class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher: MavenPackage => Option[String]) {
   val parent: PomFile  = if (hasParent) loadParent else null
   var modules: Seq[PomFile] = null // only load modules when needed
 
@@ -131,11 +131,11 @@ class PomFile(currentPackage: MavenPackage, val node: Node)(implicit fetcher: Ma
 
     var constraints = doParse
 
-    if (parent != null && parent != aggregator)
+    if (parent != null && (aggregator == null || parent.currentPackage != aggregator.currentPackage))
       constraints = constraints ++ parent.doParseParent
 
     if (modules != null)
-      (modules :\ constraints) { (m, acc) => acc ++ m.parse(this) }
+      constraints = (modules :\ constraints) { (m, acc) => m.parse(this) ++: acc }
 
     constraints
   }
@@ -206,12 +206,12 @@ class PomFile(currentPackage: MavenPackage, val node: Node)(implicit fetcher: Ma
   /**
     * whether current POM file has a <modules> section
     */
-  private def hasModules = (node \ "modules" \ "module").length > 0
+  def hasModules = (node \ "modules" \ "module").length > 0
 
   /**
     * parse the parent section, download POM for each module and create a new PomFile instance
     */
-  private def loadModules = {
+  def loadModules = {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
