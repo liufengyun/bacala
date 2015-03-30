@@ -28,8 +28,8 @@ class MavenPomParserSuite extends BasicSuite {
       """)
 
     assert(deps === Seq(
-      MavenDependency("org.scala-lang", "scala-library", VersionRange("[2.11.3, 2.11.6)"),   List[Exclusion](), Scope.COMPILE, false),
-      MavenDependency("com.typesafe", "config", VersionRange("(1.1.1, 1.2.1]"),   List[Exclusion](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -55,7 +55,7 @@ scala-library
       """)
 
     assert(deps === Seq(
-      MavenDependency("org.scala-lang", "scala-library", VersionRange("[2.11.3, 2.11.3]"),   List[Exclusion](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.3]"),   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -83,8 +83,8 @@ scala-library
       """)
 
     assert(deps === Seq(
-      MavenDependency("org.scala-lang", "scala-library", VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[Exclusion](), Scope.COMPILE, false),
-      MavenDependency("com.typesafe", "config", VersionRange("(1.1.1, 1.2.1]"),   List[Exclusion](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -105,7 +105,7 @@ scala-library
       """)
 
     assert(deps === Seq(
-      MavenDependency("org.scala-lang", "scala-library", VersionRange("0.0.0"),   List[Exclusion](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("0.0.0"),   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 

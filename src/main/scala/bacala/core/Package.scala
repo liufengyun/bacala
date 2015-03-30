@@ -1,25 +1,33 @@
 package bacala.core
 
 /**
+  * abstract representation of a library
+  */
+
+abstract class Artifact {
+  def id: String // unique identifier of the library
+
+  override def hashCode = {
+    id.hashCode * 31
+  }
+
+  override def equals(other: Any) = other match {
+    case artifact: Artifact =>
+      this.id == artifact.id
+    case _ => false
+  }
+}
+
+/**
   * abstract representation of a package
   */
 abstract class Package {
   type DependencyT <: Dependency
 
-  def id: String // unique identifier of the library
+  def artifact: Artifact
   def version: String // version number
 
-  override def hashCode = {
-    (id.hashCode + version.hashCode) * 31
-  }
-
-  override def equals(other: Any) = other match {
-    case that: Package =>
-      this.id == that.id &&  this.version == that.version
-    case _ => false
-  }
-
-  override def toString = id + "-" + version
+  override def toString = artifact + "-" + version
 }
 
 /**
@@ -27,6 +35,8 @@ abstract class Package {
   */
 abstract class Dependency {
   type PackageT <: Package
+
+  def artifact: Artifact // this dependency is on which artifact
 
   // packages compatible with this dependency
   def resolve: Option[Iterable[PackageT]]

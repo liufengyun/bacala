@@ -3,6 +3,7 @@ package bacala.maven
 
 import scala.xml.XML
 import scala.xml.Node
+import bacala.util.Cache
 import Scope._
 
 /**
@@ -75,17 +76,11 @@ object Property {
   *
   * This object also breaks parent/sub-module loop
   */
-object PomFile {
-  // TODO : thread-safe & abstraction of caching
-  var cache = Map[MavenPackage, PomFile]()
+object PomFile extends Cache[MavenPackage, Option[PomFile]] {
+  def apply(pkg: MavenPackage) = fetch(pkg, doWork(pkg))
 
-  def apply(pkg: MavenPackage) = {
-    if (cache.contains(pkg)) Some(cache(pkg)) else
-      MavenFetcher(pkg) map { spec =>
-        val pom = new PomFile(pkg, XML.loadString(spec))
-        cache = cache + (pkg -> pom)
-        pom
-      }
+  private def doWork(pkg: MavenPackage) = MavenFetcher(pkg).map { spec =>
+    new PomFile(pkg, XML.loadString(spec))
   }
 
   def apply(spec: String) = {
@@ -95,9 +90,10 @@ object PomFile {
     val groupId = Property.resolve(node)("project.groupId")
     val version = Property.resolve(node)("project.version")
 
-    val pkg = MavenPackage(groupId, artifactId, version)
+    val pkg = MavenPackage(MavenArtifact(groupId, artifactId), version)
     val pom = new PomFile(pkg, node)
-    cache = cache + (pkg -> pom)
+
+    fetch(pkg, Some(pom))
 
     pom
   }
@@ -157,26 +153,26 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     * resolve version which can be a property, a range, or defined in parent file
     */
-  private def resolveVersion(groupId: String, artifactId: String, ver: String) = ver match {
+  private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
     case Property(prop) => VersionRange(Property.resolve(node)(prop))
     case VersionRange(range) => range
-    case "" if parent != null => parent.managedVersionFor(groupId, artifactId)  // version specified in parent POM file
+    case "" if parent != null => parent.managedVersionFor(artifact)  // version specified in parent POM file
     case ver =>
-      defaultVersion(groupId, artifactId)
+      defaultVersion(artifact)
       // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
   /**
     * resolve artifact version specified in dependencyManagement section
     */
-  def managedVersionFor(groupId: String, artifactId: String): VersionRange = {
+  def managedVersionFor(artifact: MavenArtifact): VersionRange = {
     object SameArtifact {
       def unapply(dep: Node): Option[VersionRange] = {
         val gid = (dep \ "groupId").text.trim
         val aid = (dep \ "artifactId").text.trim
-        val ver = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
+        val ver = resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
 
-        if (groupId == gid && artifactId == aid)
+        if (artifact == MavenArtifact(gid, aid))
           Some(ver)
         else None
       }
@@ -187,8 +183,8 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     } match {
       case Some(v) => v
       case None =>
-        println("Error: can't find version specification in parent for " + groupId + ":" + artifactId + " in " + currentPackage)
-        defaultVersion(groupId, artifactId)
+        println("Error: can't find version specification in parent for " + artifact + " in " + currentPackage)
+        defaultVersion(artifact)
     }
   }
 
@@ -205,7 +201,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
-    PomFile(MavenPackage(groupId, artifactId, version)) match {
+    PomFile(MavenPackage(MavenArtifact(groupId, artifactId), version)) match {
       case Some(pom) => pom
       case None =>
         println("Error: failed to load parent POM for " + currentPackage)
@@ -225,7 +221,7 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
-      PomFile(MavenPackage(groupId, artifactId, version)) match {
+      PomFile(MavenPackage(MavenArtifact(groupId, artifactId), version)) match {
         case Some(pom) =>
           pom.aggregator = this
           pom
@@ -239,8 +235,8 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
   /**
     * if there's no default version for an artifact, use the default version
     */
-  def defaultVersion(groupId: String, artifactId: String): VersionRange = {
-    println("Warning: version unspecified for " + groupId + ":" + artifactId + " in " + currentPackage)
+  def defaultVersion(artifact: MavenArtifact): VersionRange = {
+    println("Warning: version unspecified for " + artifact + " in " + currentPackage)
     SimpleRange(Version(0, 0, 0, "", 0))
   }
 
@@ -255,12 +251,12 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     val optional = (dep \ "optional").text.trim == "true"
 
     // version range specification can be a complex
-    val range = resolveVersion(groupId, artifactId, (dep \ "version").text.trim)
+    val range = resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
 
     // parse exclusions
     val exclusions = (dep \ "exclusions" \ "exclusion").map(parseExclusion _)
 
-    MavenDependency(groupId, artifactId, range, exclusions, scope, optional)
+    MavenDependency(MavenArtifact(groupId, artifactId), range, exclusions, scope, optional)
   }
 
   /**
@@ -270,11 +266,11 @@ class PomFile(currentPackage: MavenPackage, node: Node) {
     val groupId = (exclusion \ "groupId").text.trim
     val artifactId = (exclusion \ "artifactId").text.trim
 
-    Exclusion(groupId, artifactId)
+    MavenArtifact(groupId, artifactId)
   }
 }
 
-object MavenPomParser {
+object MavenPomParser extends Cache[MavenPackage, Option[Iterable[MavenDependency]]] {
   /**
     * Used to parse a given POM file
     */
@@ -286,6 +282,6 @@ object MavenPomParser {
     * Fetch POM from repository and parse
     */
   def apply(pkg: MavenPackage): Option[Iterable[MavenDependency]] = {
-    PomFile(pkg).map(_.parse())
+    fetch(pkg, PomFile(pkg).map(_.parse()))
   }
 }

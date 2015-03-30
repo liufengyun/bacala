@@ -7,39 +7,41 @@ import scala.collection.concurrent.TrieMap
 import bacala.core._
 import Scope._
 
-// represent an exclusion in POM file
-case class Exclusion(groupId:String, artifactId:String)
+case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
+  override def id =  groupId + ":" + artifactId
+}
 
 /**
   * Reference
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
-case class MavenDependency(groupId:String, artifactId:String, versionRange: VersionRange, exclusions: Iterable[Exclusion], scope: Scope, optional:Boolean) extends Dependency {
+case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, exclusions: Iterable[MavenArtifact], scope: Scope, optional:Boolean) extends Dependency {
   type PackageT = MavenPackage
 
   // whether current dependency is in the given scope
   def inScope(scope: Scope) = scope == this.scope
 
   // whether current dependency can be excluded
-  def canExclude(exclusions: Iterable[Exclusion]) = exclusions.exists { exclude =>
-    (exclude.groupId == this.groupId && exclude.artifactId == this.artifactId) ||
-    (exclude.groupId == this.groupId && exclude.artifactId == "*") ||
+  def canExclude(exclusions: Iterable[MavenArtifact]) = exclusions.exists { exclude =>
+    (exclude == this.artifact) ||
+    (exclude.groupId == this.artifact.groupId && exclude.artifactId == "*") ||
     (exclude.groupId == "*" && exclude.artifactId == "*")
   }
 
   // packages compatible with this dependency
   def resolve: Option[Iterable[PackageT]] = {
-    MetaFile(groupId, artifactId) map { versions =>
+    MetaFile(artifact) map { versions =>
       val compatibleVersions = versions.filter(s => versionRange.contains(Version(s)))
-      compatibleVersions.map(v => MavenPackage(groupId, artifactId, v)).toSet
+      compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
     }
   }
 }
 
-case class MavenPackage(groupId:String, artifactId:String, version:String) extends Package {
+case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {
   type DependencyT = MavenDependency
 
-  override def id = groupId + ":" + artifactId
+  def artifactId = artifact.artifactId
+  def groupId = artifact.groupId
 }
 
 class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Repository {
@@ -64,7 +66,8 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
   }
 
   // recursively fetch the dependency closure
-  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[Exclusion]): Unit = {
+  // FIX: A ignores d in someplace, but A requires d in another place
+  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
     if (!failureSet.contains(p) && directDependencies.putIfAbsent(p, Set()) == None) // atomic
       MavenPomParser(p) map { deps => deps.filter(_.inScope(scope)).filter(dep =>
         !dep.canExclude(excludes)
@@ -102,7 +105,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
 
   // Packages with the same artefactId but different versions are in conflict
   def inConflict(p: MavenPackage, q: MavenPackage): Boolean = {
-    p.groupId == q.groupId && p.artifactId == q.artifactId && p.version != q.version
+    p.artifact == q.artifact && p.version != q.version
   }
 
   // closure of constraints of packages for p

@@ -16,7 +16,7 @@ object MavenFetcher extends (MavenPackage => Option[String]) {
 
   override def apply(p: MavenPackage) = getResponse(pomURL(p))
 
-  def getMetaData(groupId: String, artifactId: String) = getResponse(metaDataURL(groupId, artifactId))
+  def getMetaData(artifact: MavenArtifact) = getResponse(metaDataURL(artifact))
 
   def getResponse(url: String) = {
     println("Downloading " + url)
@@ -47,7 +47,7 @@ object MavenFetcher extends (MavenPackage => Option[String]) {
     * e.g.
     * http://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml
     */
-  def metaDataURL(groupId: String, artifactId: String) = {
-    s"${MavenRepoBase}/${groupId.replace(".", "/")}/${artifactId}/maven-metadata.xml"
+  def metaDataURL(artifact: MavenArtifact) = {
+    s"${MavenRepoBase}/${artifact.groupId.replace(".", "/")}/${artifact.artifactId}/maven-metadata.xml"
   }
 }
