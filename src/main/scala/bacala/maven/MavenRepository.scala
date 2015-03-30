@@ -50,7 +50,7 @@ case class MavenPackage(artifact: MavenArtifact, version:String) extends Package
   def groupId = artifact.groupId
 }
 
-class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Repository {
+class MavenRepository(initialDependencies: Iterable[MavenDependency], parser: MavenPackage => Option[Iterable[MavenDependency]]) extends Repository {
   type PackageT = MavenPackage
   type ConstraintsT = Set[Set[PackageT]]
   type DependencyT = MavenDependency
@@ -77,7 +77,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency]) extends Re
   // FIX: A ignores d in someplace, but A requires d in another place
   def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
     if (!failureSet.contains(p) && !dependencies.contains(p))
-      MavenPomParser(p) map { deps =>
+      parser(p) map { deps =>
         deps.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes))
       } match {
         case Some(deps) =>

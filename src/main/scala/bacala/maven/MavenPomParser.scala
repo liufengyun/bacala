@@ -81,21 +81,9 @@ object Property {
   }
 }
 
-/**
-  * The companion object PomFile does caching internally
-  *
-  * This object also breaks parent/sub-module loop
-  */
-object PomFile extends Cache[MavenPackage, Option[PomFile]] {
-  type Fetcher = MavenPackage => Option[String]
-
-  def apply(pkg: MavenPackage)(implicit fetcher: Fetcher) = fetch(pkg, doWork(pkg, fetcher))
-
-  private def doWork(pkg: MavenPackage, fetcher: Fetcher) = fetcher.apply(pkg).map { spec =>
-    new PomFile(pkg, XML.loadString(spec))(fetcher)
-  }
-
-  def apply(spec: String)(implicit fetcher: Fetcher) = {
+// create an POM file object
+object PomFile {
+  def apply(spec: String)(implicit fetcher: MavenPackage => Option[String]) = {
     val node = XML.loadString(spec)
     val artifactId = (node \ "artifactId").text.trim
     // version and groupId may be inherited from /project/parent
@@ -103,11 +91,7 @@ object PomFile extends Cache[MavenPackage, Option[PomFile]] {
     val version = Property.resolve(node)("project.version")
 
     val pkg = MavenPackage(MavenArtifact(groupId, artifactId), version)
-    val pom = new PomFile(pkg, node)(fetcher)
-
-    fetch(pkg, Some(pom))
-
-    pom
+    new PomFile(pkg, node)(fetcher)
   }
 }
 
@@ -125,41 +109,45 @@ object PomFile extends Cache[MavenPackage, Option[PomFile]] {
   *    (,1.0], [1.2,)  x <= 1.0 or x >= 1.2. Multiple sets are comma-separated
   *    (,1.1),(1.1,)   This excludes 1.1 if it is known not to work in combination with this library
   *
-  * TODO
-  *
-  *  - exclusions
-  *  - properties
   *
   * Reference: [1] http://maven.apache.org/pom.html
   *            [2] http://docs.codehaus.org/display/MAVEN/Dependency+Mediation+and+Conflict+Resolution
   *
   */
 
-class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenPackage => Option[String]) {
-  var parent: PomFile  = null
-  var modules: Seq[PomFile] = null
-  var aggregator: PomFile = null // aggregator of current PomFile
+class PomFile(currentPackage: MavenPackage, val node: Node)(implicit fetcher: MavenPackage => Option[String]) {
+  val parent: PomFile  = if (hasParent) loadParent else null
+  var modules: Seq[PomFile] = null // only load modules when needed
 
   def groupId = currentPackage.groupId
   def artifactId = currentPackage.artifactId
   def version = currentPackage.version
 
   /**
-    *  parse the pom file and return the dependency constraints as a set of package sets
+    *  parse the POM file and return the dependency constraints
     */
-  def parse(includeModules: Boolean = true): Iterable[MavenDependency] = {
-    if (hasParent) parent = loadParent
-    if (includeModules && hasModules) modules = loadModules
+  def parse(aggregator: PomFile = null): Iterable[MavenDependency] = {
+    if (hasModules) modules = loadModules
 
-    var constraints = (node \ "dependencies" \ "dependency") map (parseDependency)
+    var constraints = doParse
 
-    if (parent != null && aggregator != parent)
-      constraints = constraints ++ parent.parse(false)
+    if (parent != null && parent != aggregator)
+      constraints = constraints ++ parent.doParseParent
 
     if (modules != null)
-      constraints = (modules :\ constraints) { (m, acc) => acc ++ m.parse(true) }
+      (modules :\ constraints) { (m, acc) => acc ++ m.parse(this) }
 
     constraints
+  }
+
+  // get all parents in the chain
+  def doParseParent: Iterable[MavenDependency] = {
+    if (parent == null) doParse else doParse ++ parent.doParseParent
+  }
+
+  // only parse contents in current POM file
+  def doParse = {
+    (node \ "dependencies" \ "dependency") map (parseDependency)
   }
 
   /**
@@ -205,7 +193,9 @@ class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenP
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
-    PomFile(MavenPackage(MavenArtifact(groupId, artifactId), version)) match {
+    fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
+      PomFile(spec)(fetcher)
+    } match {
       case Some(pom) => pom
       case None =>
         println("Error: failed to load parent POM for " + currentPackage)
@@ -216,7 +206,7 @@ class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenP
   /**
     * whether current POM file has a <modules> section
     */
-  private def hasModules = (node \ "modules").length > 0
+  private def hasModules = (node \ "modules" \ "module").length > 0
 
   /**
     * parse the parent section, download POM for each module and create a new PomFile instance
@@ -225,10 +215,10 @@ class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenP
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
-      PomFile(MavenPackage(MavenArtifact(groupId, artifactId), version)) match {
-        case Some(pom) =>
-          pom.aggregator = this
-          pom
+      fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
+        PomFile(spec)(fetcher)
+      } match {
+        case Some(pom) => pom
         case None =>
           println("Error: failed to load module " + artifactId + " for " + currentPackage)
           null
@@ -274,20 +264,13 @@ class PomFile(currentPackage: MavenPackage, node: Node)(implicit fetcher: MavenP
   }
 }
 
-object MavenPomParser extends Cache[MavenPackage, Option[Iterable[MavenDependency]]] {
-  type Fetcher = MavenPackage => Option[String]
+trait MavenPomParser extends (String => Iterable[MavenDependency]) {
+  def fetcher: MavenPackage => Option[String]
 
   /**
     * Used to parse a given POM file
     */
-  def apply(spec: String)(implicit fetcher: Fetcher): Iterable[MavenDependency] = {
-    PomFile(spec).parse()
-  }
-
-  /**
-    * Fetch POM from repository and parse
-    */
-  def apply(pkg: MavenPackage)(implicit fetcher: Fetcher): Option[Iterable[MavenDependency]] = {
-    fetch(pkg, PomFile(pkg).map(_.parse()))
+  override def apply(spec: String): Iterable[MavenDependency] = {
+    PomFile(spec)(fetcher).parse()
   }
 }

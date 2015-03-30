@@ -5,8 +5,11 @@ import bacala.maven._
 import scala.xml.XML
 
 class MavenPomParserSuite extends BasicSuite {
+
   test("parse POM with range version") {
-    val deps = MavenPomParser(
+    val parser = new MavenPomParser { val fetcher = null }
+
+    val deps = parser(
       """
       <project>
           <groupId>org.test</groupId>
@@ -25,7 +28,7 @@ class MavenPomParserSuite extends BasicSuite {
               </dependency>
           </dependencies>
       </project>
-      """)(MavenFetcher)
+      """)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
@@ -34,7 +37,9 @@ class MavenPomParserSuite extends BasicSuite {
   }
 
   test("test new line and space in specification") {
-    val deps = MavenPomParser(
+    val parser = new MavenPomParser { val fetcher = null }
+
+    val deps = parser(
       """
       <project>
           <groupId>org.test</groupId>
@@ -52,7 +57,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)(MavenFetcher)
+      """)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.3]"),   List[MavenArtifact](), Scope.COMPILE, false)
@@ -61,7 +66,9 @@ scala-library
 
 
   test("parse POM with composite range version") {
-    val deps = MavenPomParser(
+    val parser = new MavenPomParser { val fetcher = null }
+
+    val deps = parser(
       """
       <project>
           <groupId>org.test</groupId>
@@ -80,7 +87,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)(MavenFetcher)
+      """)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
@@ -88,8 +95,193 @@ scala-library
     ))
   }
 
+  test("version defined in parent POM") {
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(
+          """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>3.2</version>
+              <dependencyManagement>
+                  <dependencies>
+                      <dependency>
+                          <groupId>org.scala-lang</groupId>
+                          <artifactId>scala-library</artifactId>
+                          <version>(2.11.0, 2.11.3), (2.11.3, 2.11.6)</version>
+                      </dependency>
+                  </dependencies>
+              </dependencyManagement>
+          </project>
+          """)
+      }
+    }
+
+    val deps = parser(
+      """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>3.2</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+              </dependency>
+          </dependencies>
+      </project>
+      """)
+
+    assert(deps === Seq(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+
+  }
+
+  test("dependencies defined in parent POM") {
+    val parent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parent</artifactId>
+          <version>3.2</version>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>(1.1.1, 1.2.1]</version>
+              </dependency>
+          </dependencies>
+          <dependencyManagement>
+              <dependencies>
+                  <dependency>
+                      <groupId>org.scala-lang</groupId>
+                      <artifactId>scala-library</artifactId>
+                      <version>(2.11.0, 2.11.3), (2.11.3, 2.11.6)</version>
+                  </dependency>
+              </dependencies>
+          </dependencyManagement>
+      </project>
+      """
+
+    val child = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>3.2</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(parent)
+      }
+    }
+
+    val deps = parser(child)
+
+    assert(deps === Seq(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
+  test("POM with multiple modules") {
+    val parent = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>parent</artifactId>
+          <version>2.4</version>
+          <modules>
+              <module>m1</module>
+              <module>m2</module>
+          </modules>
+          <dependencies>
+              <dependency>
+                  <groupId>org.scala-lang</groupId>
+                  <artifactId>scala-library</artifactId>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val m1 = """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>m1</artifactId>
+              <version>2.4</version>
+              <parent>
+                  <groupId>org.test</groupId>
+                  <artifactId>parent</artifactId>
+                  <version>2.4</version>
+              </parent>
+              <dependencies>
+                  <dependency>
+                      <groupId>com.typesafe</groupId>
+                      <artifactId>config</artifactId>
+                      <version>(1.1.1, 1.2.1]</version>
+                  </dependency>
+              </dependencies>
+          </project>
+          """
+
+    val m2 = """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>m2</artifactId>
+              <version>2.4</version>
+              <parent>
+                  <groupId>org.test</groupId>
+                  <artifactId>parent</artifactId>
+                  <version>2.4</version>
+              </parent>
+              <dependencies>
+                  <dependency>
+                      <groupId>com.typesafe</groupId>
+                      <artifactId>slick</artifactId>
+                      <version>(1.1.1, 1.2.1]</version>
+                  </dependency>
+              </dependencies>
+          </project>
+          """
+
+    val parser = new MavenPomParser {
+      val fetcher = (p: MavenPackage) => p match {
+        case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
+        case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(m1)
+        case MavenPackage(MavenArtifact("org.test", "m2"), "2.4") => Some(m2)
+      }
+    }
+
+    val deps = parser(parent)
+
+    assert(deps === Seq(
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "slick"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
   test("parse POM with unspecified version") {
-    val deps = MavenPomParser(
+    val parser = new MavenPomParser { val fetcher = null }
+
+    val deps = parser(
       """
       <project>
           <groupId>org.test</groupId>
@@ -102,7 +294,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """)(MavenFetcher)
+      """)
 
     assert(deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("0.0.0"),   List[MavenArtifact](), Scope.COMPILE, false)

@@ -1,13 +1,26 @@
 package bacala.maven
 
 import bacala.core._
+import bacala.util.Cache
+
+object PomFileCachedFetcher extends (MavenPackage => Option[String]) with Cache[MavenPackage, Option[String]] {
+  override def apply(pkg: MavenPackage) = fetch(pkg, MavenFetcher(pkg))
+}
+
+object PomFileParser extends MavenPomParser {
+  val fetcher = PomFileCachedFetcher
+}
 
 object MavenDependencyManager extends DependencyManager {
   type PackageT = MavenPackage
   type DependencyT = MavenDependency
 
+  object Parser extends (MavenPackage => Option[Iterable[MavenDependency]]) with Cache[MavenPackage, Option[Iterable[MavenDependency]]] {
+    override def apply(pkg: MavenPackage) = fetch(pkg, MavenFetcher(pkg).map(spec => PomFileParser(spec)))
+  }
+
   override def resolve(initial: Iterable[DependencyT]): Iterable[PackageT] = {
-    val repo = new MavenRepository(initial)
+    val repo = new MavenRepository(initial, Parser)
     repo.construct(Scope.COMPILE)
     println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))
@@ -32,7 +45,7 @@ object MavenDependencyManager extends DependencyManager {
       val content = source.mkString
       source.close()
 
-      val result = resolve(MavenPomParser(content)(MavenFetcher))
+      val result = resolve(PomFileParser(content))
     }
   }
 }
