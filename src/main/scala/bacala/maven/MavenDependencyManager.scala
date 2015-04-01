@@ -11,8 +11,8 @@ object PomFileParser extends MavenPomParser {
   val fetcher = PomFileCachedFetcher
 }
 
-object CachedMetaFileParser extends (MavenArtifact => Option[Iterable[Version]]) with Cache[MavenArtifact, Option[Iterable[Version]]] {
-  override def apply(arte: MavenArtifact) = fetch(arte, MavenFetcher.getMetaData(arte).map(meta => MetaFileParser(meta)))
+object CachedMetaFileParser extends (MavenArtifact => Option[Iterable[String]]) with Cache[MavenArtifact, Option[Iterable[String]]] {
+  override def apply(artf: MavenArtifact) = fetch(artf, MavenFetcher.getMetaData(artf).map(meta => MetaFileParser(meta)))
 }
 
 object MavenDependencyManager extends DependencyManager {

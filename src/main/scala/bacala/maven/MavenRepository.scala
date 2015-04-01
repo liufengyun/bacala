@@ -29,9 +29,9 @@ case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, 
   }
 
   // packages compatible with this dependency
-  def resolve(versions: Iterable[Version]): Iterable[PackageT] = {
-    val compatibleVersions = versions.filter(v => versionRange.contains(v))
-    compatibleVersions.map(v => MavenPackage(artifact, v.toString)).toSet
+  def resolve(versions: Iterable[String]): Iterable[PackageT] = {
+    val compatibleVersions = versions.filter(v => versionRange.contains(Version(v)))
+    compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
   }
 
   // dependency graph building
@@ -48,7 +48,7 @@ case class MavenPackage(artifact: MavenArtifact, version:String) extends Package
   def resolve(dependencies: Iterable[MavenDependency], excludes: Iterable[MavenArtifact]): Option[Set[Set[MavenPackage]]] = ???
 }
 
-class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[Version]]) extends Repository {
+class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[String]]) extends Repository {
   type PackageT = MavenPackage
   type ConstraintsT = Set[Set[PackageT]]
   type DependencyT = MavenDependency

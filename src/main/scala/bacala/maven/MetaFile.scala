@@ -8,7 +8,7 @@ import bacala.util.Cache
   * The object MetaFile is the interface to get all version definitions for
   * an artifact. It does caching internally.
   */
-object MetaFileParser extends (String => Iterable[Version]) {
+object MetaFileParser extends (String => Iterable[String]) {
   override def apply(metaData: String) = {
     (XML.loadString(metaData) \ "versioning" \ "versions" \ "version").
       map(_.text.trim).
@@ -18,6 +18,6 @@ object MetaFileParser extends (String => Iterable[Version]) {
           println("Error: unknown version format " + ver + " in meta data XML" )
           false
         }
-      ).map(Version(_))
+      )
   }
 }
