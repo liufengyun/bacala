@@ -533,24 +533,24 @@ scala-library
 
   test("test variable property") {
     val xml = """<project><properties><x>56</x></properties></project>"""
-    assert(Property.resolve(XML.loadString(xml))("x") === "56")
+    assert(Property.resolve(XML.loadString(xml), "x") === Some("56"))
   }
 
   test("test variable property with dot in name") {
     val xml = """<project><properties><x.y>56</x.y></properties></project>"""
     assert(Property.unapply("${x.y}").nonEmpty)
-    assert(Property.resolve(XML.loadString(xml))("x.y") === "56")
+    assert(Property.resolve(XML.loadString(xml), "x.y") === Some("56"))
   }
 
   test("test  property reference another property") {
     val xml = """<project><properties><x>56</x><y>${x}</y></properties></project>"""
-    assert(Property.resolve(XML.loadString(xml))("y") === "56")
+    assert(Property.resolve(XML.loadString(xml), "y") === Some("56"))
   }
 
   test("test variable property with dash in name") {
     val xml = """<project><properties><x-y>56</x-y></properties></project>"""
     assert(Property.unapply("${x-y}").nonEmpty)
-    assert(Property.resolve(XML.loadString(xml))("x-y") === "56")
+    assert(Property.resolve(XML.loadString(xml), "x-y") === Some("56"))
   }
 
 
@@ -568,13 +568,14 @@ scala-library
       </project>
       """
 
-    assert(Property.resolve(XML.loadString(xml))("project.version") === "4.3")
+    assert(Property.resolve(XML.loadString(xml), "project.version") === Some("4.3"))
   }
 
   test("test old-style path property") {
     val xml = """<project><version>56</version><artifactId>test-artifact</artifactId></project>"""
-    assert(Property.resolve(XML.loadString(xml))("version") === "56")
+    assert(Property.resolve(XML.loadString(xml), "version") === Some("56"))
   }
+
 
   test("test path property resolution via parent") {
     val xml =   """
@@ -592,6 +593,45 @@ scala-library
       </project>
       """
 
-    assert(Property.resolve(XML.loadString(xml))("project.version") === "4.3")
+    assert(Property.resolve(XML.loadString(xml), "project.version") === Some("4.3"))
+  }
+
+  test("test version resolution via parent") {
+    val xml =   """
+      <project>
+          <parent>
+              <version>4.3</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    assert(PomFile.resolveVersion(XML.loadString(xml)) === "4.3")
+  }
+
+  test("test groupId resolution via parent") {
+    val xml =   """
+      <project>
+          <parent>
+              <groupId>org.test</groupId>
+              <version>4.3</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>com.typesafe</groupId>
+                  <artifactId>config</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    assert(PomFile.resolveGroupId(XML.loadString(xml)) === "org.test")
   }
 }

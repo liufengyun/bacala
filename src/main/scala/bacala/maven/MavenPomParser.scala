@@ -23,30 +23,26 @@ import Scope._
   * resolved to the path /project/parent/version if it can't be resolved
   * at the path /project/version.
   *
-  * TODO: currently the implementation doesn't support the full inheritance
-  * mechanism of POM file. It should be extended when there's compelling
-  * need to do so.
-  *
   * Reference: http://maven.apache.org/pom.html#Properties
   */
 object Property {
   val propertyPat = """\s*\$\{\s*([A-Za-z0-9.-]+)\s*\}\s*""".r
 
-  def resolve(node: Node)(property: String): String = {
+  def resolve(node: Node, property: String): Option[String] = {
     val res = doResolve(node, property)
 
     // property can reference another property
     res match {
-      case Property(prop) => resolve(node)(prop)
+      case Some(Property(prop)) => resolve(node, prop)
       case _ => res
     }
   }
 
-  private def doResolve(node: Node, property: String): String = {
+  private def doResolve(node: Node, property: String) = {
     // first try variable property
     val res = resolveVariable(node, property) // variable property
 
-    if (!res.isEmpty) res else {
+    if (!res.isEmpty) Some(res) else {
       val parts = property.split('.')
       resolvePath(node, parts) // path property
     }
@@ -56,7 +52,7 @@ object Property {
     (node \ "properties" \ property ).text.trim
   }
 
-  private def resolvePath(node: Node, path: Array[String]) = {
+  private def resolvePath(node: Node, path: Seq[String]): Option[String] = {
     val initial: Option[Node] = Some(node)
     // support old-style property like ${version}
     val parts = if (path(0) == "project") path.tail else path
@@ -69,9 +65,10 @@ object Property {
     }
 
     result match {
-      case Some(node) => node.text.trim
+      case Some(node) => Some(node.text.trim)
       case None =>
-        ((node \ "parent") /: path.tail) { (child, part) => (child \ part)(0) }.text.trim
+        if (parts(0) == "parent") None else
+          resolvePath(node, "parent" +: parts)
     }
   }
 
@@ -87,11 +84,25 @@ object PomFile {
     val node = XML.loadString(spec)
     val artifactId = (node \ "artifactId").text.trim
     // version and groupId may be inherited from /project/parent
-    val groupId = Property.resolve(node)("project.groupId")
-    val version = Property.resolve(node)("project.version")
+    val groupId = resolveGroupId(node)
+    val version = resolveVersion(node)
 
     val pkg = MavenPackage(MavenArtifact(groupId, artifactId), version)
     new PomFile(pkg, node)(fetcher)
+  }
+
+  def resolveVersion(node: Node) = {
+    val version = (node \ "version").text.trim
+
+    if (!version.isEmpty) version else
+      (node \ "parent" \ "version").text.trim
+  }
+
+  def resolveGroupId(node: Node) = {
+    val groupId = (node \ "groupId").text.trim
+
+    if (!groupId.isEmpty) groupId else
+      (node \ "parent" \ "groupId").text.trim
   }
 }
 
@@ -154,7 +165,13 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     * resolve version which can be a property, a range, or defined in parent file
     */
   private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
-    case Property(prop) => VersionRange(Property.resolve(node)(prop))
+    case Property(prop) =>
+      Property.resolve(node, prop) match {
+        case Some(v) => VersionRange(v)
+        case None =>
+          println("Warning: can't resolve version specification $prop for $artifact in the parent POM of $currentPackage")
+          defaultVersion(artifact)
+      }
     case VersionRange(range) => range
     case "" if parent != null =>
       parent.managedVersionFor(artifact) match {  // version specified in parent POM file

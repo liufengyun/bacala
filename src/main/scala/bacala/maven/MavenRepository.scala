@@ -9,6 +9,8 @@ import Scope._
 
 case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
   override def id =  groupId + ":" + artifactId
+
+  override def toString = id
 }
 
 /**
