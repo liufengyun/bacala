@@ -5,5 +5,5 @@ abstract class DependencyManager {
   type DependencyT <: Dependency
 
   // call the algorithm to resolve dependency
-  def resolve(initialConstraints: Iterable[DependencyT]): Iterable[PackageT]
+  def resolve(initialConstraints: Iterable[DependencyT]): Option[Iterable[PackageT]]
 }

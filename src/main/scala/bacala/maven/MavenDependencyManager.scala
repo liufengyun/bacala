@@ -24,7 +24,7 @@ object MavenDependencyManager extends DependencyManager {
     override def apply(pkg: MavenPackage) = fetch(pkg, MavenFetcher(pkg).map(spec => PomFileParser(spec)))
   }
 
-  override def resolve(initial: Iterable[DependencyT]): Iterable[PackageT] = {
+  override def resolve(initial: Iterable[DependencyT]): Option[Iterable[PackageT]] = {
     val repo = new MavenRepository(initial)(Parser, CachedMetaFileParser)
     repo.construct(Scope.COMPILE)
     println("*****all packages in repository******")
@@ -33,10 +33,7 @@ object MavenDependencyManager extends DependencyManager {
     println(repo.conflicts.mkString("\n"))
     println("*****resolution result******")
 
-    SatSolver.solve(repo) match {
-      case Some(set) => set
-      case None => Seq()
-    }
+    SatSolver.solve(repo)
   }
 
   def printUsage = {
@@ -55,8 +52,10 @@ object MavenDependencyManager extends DependencyManager {
       val content = source.mkString
       source.close()
 
-      val result = resolve(PomFileParser(content))
-      println(result.mkString("\n"))
+      resolve(PomFileParser(content)) match {
+        case Some(set) => println(set.mkString("\n"))
+        case None => println("No solution possible")
+      }
     }
   }
 }
