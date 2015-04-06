@@ -21,7 +21,6 @@ object SatSolver extends Solver {
     // helper methods
     def clauseSize = (packages :\ 0) {(p, acc) => repository(p).size + acc } + conflicts.size
 
-
     def clauseForPackage(p: PackageT): Iterable[VecInt] = {
       repository(p).filter(_.size != 0).map { set =>
         new VecInt(set.map(package2Int(_)).toArray)

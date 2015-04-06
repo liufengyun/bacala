@@ -8,15 +8,15 @@ abstract class Repository {
   type DependencyT <: Dependency
   type ConflictT = (PackageT, PackageT)
 
-  // return constraints closure of the package p
+  /** Returns the packages that p depends on directly
+    */
   def apply(p: PackageT): Iterable[Iterable[PackageT]]
 
-  // return direct dependencies of a package
-  def dependencies(p: PackageT): Iterable[DependencyT]
-
-  // all packages in the repository
+  /** Returns all packages in the repository
+    */
   def packages: Iterable[PackageT]
 
-  // all primitive conflicts in the repository
+  /** Returns all primitive conflicts in the repository
+    */
   def conflicts: Iterable[ConflictT]
 }

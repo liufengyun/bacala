@@ -22,8 +22,6 @@ abstract class Artifact {
   * abstract representation of a package
   */
 abstract class Package {
-  type DependencyT <: Dependency
-
   def artifact: Artifact
   def version: String // version number
 

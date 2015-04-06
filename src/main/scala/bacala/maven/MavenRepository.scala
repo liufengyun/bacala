@@ -20,9 +20,6 @@ case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
 case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, exclusions: Iterable[MavenArtifact], scope: Scope, optional:Boolean) extends Dependency {
   type PackageT = MavenPackage
 
-  // whether current dependency is in the given scope
-  def inScope(scope: Scope) = scope == this.scope
-
   // whether current dependency can be excluded
   def canExclude(exclusions: Iterable[MavenArtifact]) = exclusions.exists { exclude =>
     (exclude == this.artifact) ||
@@ -35,32 +32,21 @@ case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, 
     val compatibleVersions = versions.filter(v => versionRange.contains(Version(v)))
     compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
   }
-
-  // dependency graph building
-  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Map[MavenPackage, Set[Set[MavenPackage]]] = ???
-
 }
 
 case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {
-  type DependencyT = MavenDependency
-
   def artifactId = artifact.artifactId
   def groupId = artifact.groupId
-
-  def resolve(dependencies: Iterable[MavenDependency], excludes: Iterable[MavenArtifact]): Option[Set[Set[MavenPackage]]] = ???
 }
 
 class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[String]]) extends Repository {
   type PackageT = MavenPackage
-  type ConstraintsT = Set[Set[PackageT]]
+  type DependenciesT = Set[Set[PackageT]]
   type DependencyT = MavenDependency
 
-  private val dependencies = new TrieMap[PackageT, ConstraintsT]
-  private val directDependencies = new TrieMap[PackageT, Iterable[MavenDependency]]
-  private val failureSet = new TrieMap[PackageT, Unit]
+  private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
-
-  implicit val fetcher = MavenFetcher
+  private val artifactsMap = new TrieMap[MavenArtifact, Set[PackageT]]
 
   def construct(scope: Scope) = {
     for {
@@ -68,47 +54,58 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: Ma
       if dep.scope == scope
       set <- metaParser(dep.artifact).map(dep.resolve(_))
       p <- set
-    } resolve(p, scope, dep.exclusions)
+    } resolve(p, dep.exclusions, Set())
 
     createConflicts
   }
 
-  // recursively fetch the dependency closure
-  // FIX: A ignores d in someplace, but A requires d in another place
-  def resolve(p: MavenPackage, scope: Scope, excludes: Iterable[MavenArtifact]): Unit = {
-    if (!failureSet.contains(p) && !dependencies.contains(p))
-      parser(p) map { deps =>
-        deps.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes))
-      } match {
-        case Some(deps) =>
-          directDependencies += p -> deps
+  /** recursively builds the dependency closure
+    */
+  def resolve(p: MavenPackage, excludes: Iterable[MavenArtifact], path: Set[MavenPackage]): Unit = {
+    parser(p) map { deps =>
+      deps.filter(dep => dep.scope == COMPILE && !dep.canExclude(excludes))
+    } match {
+      case Some(deps) =>
+        // resolve direct dependency
+        val sets = (for {
+          dep <- deps
+          art = dep.artifact
+          set <- metaParser(art).map(dep.resolve(_))
+        } yield set.filter(parser(_).nonEmpty).toSet).toSet
 
-          val sets = (for {
-            dep <- deps
-            set <- metaParser(dep.artifact).map(dep.resolve(_))
-          } yield set.toSet).toSet
+        // excludes in one path may be included in another path
+        dependencies += p -> (sets | dependencies.getOrElse(p, Set()))
 
-          dependencies += p -> sets
+        val map = sets zip deps
 
-          for ((set, dep) <- sets zip deps; q <- set) resolve(q, scope, dep.exclusions ++ excludes)
-        case None =>
-          directDependencies -= p
-          failureSet += p -> ()
-      }
+        // update conflict set
+        map.foreach { case (set, dep) =>
+          artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
+        }
+
+        // recursive resolve
+        for {
+          (set, dep) <- map
+          q <- set
+          if !path.contains(q)
+        } resolve(q, dep.exclusions ++ excludes, path + p)
+      case None =>
+    }
   }
 
-  // Intialize conflicts structure from repository data
-  // TODO: reduce symmetric duplicates, (p, q) and (q, p)
+  /** Intialize conflicts structure from repository data
+    */
   private def createConflicts = {
     val pkgs = this.packages
 
     val conflicts = for {
+      (_, pkgs) <- artifactsMap
       p <- pkgs
-      q <- pkgs.filter(_ != p)
-      if inConflict(p, q)
-    } yield (p, q) -> ()
-
-    conflictSet ++= conflicts
+      q <- pkgs
+      if p != q
+      if !conflictSet.contains((p, q))
+      if !conflictSet.contains((q, p))
+    } conflictSet += (p, q) -> ()
   }
 
   // Packages with the same artefactId but different versions are in conflict
@@ -116,15 +113,15 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: Ma
     p.artifact == q.artifact && p.version != q.version
   }
 
-  // closure of constraints of packages for p
+  /** Returns the packages that p depends on directly
+    */
   override def apply(p: PackageT) = dependencies(p)
 
-  // return direct dependencies of a package
-  override def dependencies(p: PackageT) = directDependencies(p)
-
-  // all packages
+  /** Returns all packages in the repository
+    */
   override def packages = dependencies.keys
 
-  // all conflicts
+  /** Returns all primitive conflicts in the repository
+    */
   override def conflicts = conflictSet.keys
 }
