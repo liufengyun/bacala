@@ -2,6 +2,7 @@ package bacala.maven
 
 import bacala.core._
 import bacala.util.Cache
+import bacala.alg.SatSolver
 
 object PomFileCachedFetcher extends (MavenPackage => Option[String]) with Cache[MavenPackage, Option[String]] {
   override def apply(pkg: MavenPackage) = fetch(pkg, MavenFetcher(pkg))
@@ -30,7 +31,12 @@ object MavenDependencyManager extends DependencyManager {
     println(repo.packages.mkString("\n"))
     println("*****all conflicts in repository******")
     println(repo.conflicts.mkString("\n"))
-    Set()
+    println("*****resolution result******")
+
+    SatSolver.solve(repo) match {
+      case Some(set) => set
+      case None => Seq()
+    }
   }
 
   def printUsage = {
@@ -50,6 +56,7 @@ object MavenDependencyManager extends DependencyManager {
       source.close()
 
       val result = resolve(PomFileParser(content))
+      println(result.mkString("\n"))
     }
   }
 }
