@@ -39,22 +39,28 @@ case class MavenPackage(artifact: MavenArtifact, version:String) extends Package
   def groupId = artifact.groupId
 }
 
-class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[String]]) extends Repository {
+class MavenRepository(initialDeps: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[String]]) extends Repository {
   type PackageT = MavenPackage
   type DependenciesT = Set[Set[PackageT]]
-  type DependencyT = MavenDependency
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
   private val artifactsMap = new TrieMap[MavenArtifact, Set[PackageT]]
+  private var initialSets = Set[Set[PackageT]]()
+
+  /** Returns initial constraints
+    */
+  override def initial = initialSets
 
   def construct(scope: Scope) = {
     for {
-      dep <- initialDependencies
+      dep <- initialDeps
       if dep.scope == scope
-      set <- metaParser(dep.artifact).map(dep.resolve(_))
-      p <- set
-    } resolve(p, dep.exclusions, Set())
+      set <- metaParser(dep.artifact).map(dep.resolve(_).toSet)
+    } {
+      initialSets = initialSets + set
+      set.map(resolve(_, dep.exclusions, Set()))
+    }
 
     createConflicts
   }
@@ -63,7 +69,7 @@ class MavenRepository(initialDependencies: Iterable[MavenDependency])(parser: Ma
     */
   def resolve(p: MavenPackage, excludes: Iterable[MavenArtifact], path: Set[MavenPackage]): Unit = {
     parser(p) map { deps =>
-      deps.filter(dep => dep.scope == COMPILE && !dep.canExclude(excludes))
+      deps.filter(dep => dep.scope == COMPILE && !dep.canExclude(excludes) && !dep.optional)
     } match {
       case Some(deps) =>
         // resolve direct dependency

@@ -5,8 +5,11 @@ package bacala.core
   */
 abstract class Repository {
   type PackageT <: Package
-  type DependencyT <: Dependency
   type ConflictT = (PackageT, PackageT)
+
+  /** Returns initial constraints for the repository
+    */
+  def initial: Iterable[Iterable[PackageT]]
 
   /** Returns the packages that p depends on directly
     */

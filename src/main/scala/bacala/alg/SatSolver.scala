@@ -20,10 +20,15 @@ object SatSolver extends Solver {
 
     // helper methods
     def clauseSize = (packages :\ 0) {(p, acc) => repository(p).size + acc } + conflicts.size
+    def initialClause = {
+      repository.initial.map { set =>
+        new VecInt(set.map(package2Int(_)).toArray)
+      }
+    }
 
     def clauseForPackage(p: PackageT): Iterable[VecInt] = {
       repository(p).filter(_.size != 0).map { set =>
-        new VecInt(set.map(package2Int(_)).toArray)
+        new VecInt(-package2Int(p) +: set.map(package2Int(_)).toArray)
       }
     }
 
@@ -37,15 +42,17 @@ object SatSolver extends Solver {
     solver.newVar(packages.size)
     solver.setExpectedNumberOfClauses(clauseSize)
 
+    initialClause.foreach { clause => solver.addClause(clause) }
+
     for {
       p <- packages
       clause <- clauseForPackage(p)
     } solver.addClause(clause)
 
-    conflicts.foreach { c=> solver.addClause(clauseForConflict(c)) }
+    conflicts.foreach { c => solver.addClause(clauseForConflict(c)) }
 
     val res = solver.findModel()
     if (res == null) None else
-      Some(res.filter(_ > 0).map(int2Package(_)))
+      Some(res.filter(_ > 0).map(int2Package(_)).toSet)
   }
 }
