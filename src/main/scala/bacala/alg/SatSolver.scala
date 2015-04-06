@@ -13,13 +13,18 @@ object SatSolver extends Solver {
   override def solve[T <: Repository](repository: T): Option[Iterable[repository.PackageT]] = {
     type PackageT = repository.PackageT
     // data
-    val packages = repository.packages
+    // important for packages to be ordered for package2Int and int2Package to work
+    val packages = repository.packages.toList
     val conflicts = repository.conflicts
     val package2Int = packages.zip(Stream from 1).toMap
     val int2Package = (Stream from 1).zip(packages).toMap
 
     // helper methods
-    def clauseSize = (packages :\ 0) {(p, acc) => repository(p).size + acc } + conflicts.size
+    def clauseSize = conflicts.size +
+      (packages :\ 0) {(p, acc) => repository(p).size + acc } +
+      repository.initial.size
+
+
     def initialClause = {
       repository.initial.map { set =>
         new VecInt(set.map(package2Int(_)).toArray)
