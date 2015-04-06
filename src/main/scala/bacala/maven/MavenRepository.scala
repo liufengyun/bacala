@@ -50,7 +50,7 @@ class MavenRepository(initialDeps: Iterable[MavenDependency])(parser: MavenPacka
 
   /** Returns initial constraints
     */
-  override def initial = initialSets
+  override def seeds = initialSets
 
   def construct(scope: Scope) = {
     for {

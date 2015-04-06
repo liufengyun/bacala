@@ -22,11 +22,11 @@ object SatSolver extends Solver {
     // helper methods
     def clauseSize = conflicts.size +
       (packages :\ 0) {(p, acc) => repository(p).size + acc } +
-      repository.initial.size
+      repository.seeds.size
 
 
     def initialClause = {
-      repository.initial.map { set =>
+      repository.seeds.map { set =>
         new VecInt(set.map(package2Int(_)).toArray)
       }
     }

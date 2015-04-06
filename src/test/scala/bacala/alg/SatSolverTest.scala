@@ -30,7 +30,7 @@ class SatSolverSuite extends BasicSuite {
       )
     )
 
-    override def initial = Set(Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4")))
+    override def seeds = Set(Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4")))
 
     override def apply(p: PackageT) = map(p)
 

@@ -9,7 +9,7 @@ abstract class Repository {
 
   /** Returns initial constraints for the repository
     */
-  def initial: Iterable[Iterable[PackageT]]
+  def seeds: Iterable[Iterable[PackageT]]
 
   /** Returns the packages that p depends on directly
     */
