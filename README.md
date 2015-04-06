@@ -36,6 +36,13 @@ The input XML is a POM file.
   - [ ] support SNAPSHOT versioning
 - [ ] resolve dependency via SAT solver
 - [ ] support multiple resolvers
+  - [ ] support chaining resolvers
+  - [ ] support FileSystem resolvers
+  - [ ] support URL resolvers
+  - [ ] support SFTP resolvers
+  - [ ] support SSH resolvers
+  - [ ] support path pattern for configuration XML file
+  - [ ] support path pattern for artifact
 - [ ] support Ivy configuration file
   - [ ] support force a specific package
   - [ ] support configuration
