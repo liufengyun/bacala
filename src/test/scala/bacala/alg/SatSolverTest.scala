@@ -10,6 +10,7 @@ class SatSolverSuite extends BasicSuite {
     type PackageT = MavenPackage
 
     val map = Map[PackageT, Set[Set[PackageT]]](
+      MavenPackage(MavenArtifact("root", "root"), "2.4.2") -> Set(Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4"))),
       MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.2") -> Set(),
       MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3") -> Set(),
       MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4") -> Set(
@@ -30,7 +31,7 @@ class SatSolverSuite extends BasicSuite {
       )
     )
 
-    override def seeds = Set(Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4")))
+    override def root = MavenPackage(MavenArtifact("root", "root"), "2.4.2")
 
     override def apply(p: PackageT) = map(p)
 

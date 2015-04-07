@@ -21,19 +21,14 @@ object SatSolver extends Solver {
 
     // helper methods
     def clauseSize = conflicts.size +
-      (packages :\ 0) {(p, acc) => repository(p).size + acc } +
-      repository.seeds.size
-
-
-    def initialClause = {
-      repository.seeds.map { set =>
-        new VecInt(set.map(package2Int(_)).toArray)
-      }
-    }
+      (packages :\ 0) {(p, acc) => repository(p).size + acc }
 
     def clauseForPackage(p: PackageT): Iterable[VecInt] = {
-      repository(p).filter(_.size != 0).map { set =>
-        new VecInt(-package2Int(p) +: set.map(package2Int(_)).toArray)
+      repository(p).map { set =>
+        if (repository.root == p)
+          new VecInt(set.map(package2Int(_)).toArray)
+        else
+          new VecInt(-package2Int(p) +: set.map(package2Int(_)).toArray)
       }
     }
 
@@ -46,8 +41,6 @@ object SatSolver extends Solver {
     // number of vars
     solver.newVar(packages.size)
     solver.setExpectedNumberOfClauses(clauseSize)
-
-    initialClause.foreach { clause => solver.addClause(clause) }
 
     for {
       p <- packages

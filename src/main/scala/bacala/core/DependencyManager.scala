@@ -2,8 +2,7 @@ package bacala.core
 
 abstract class DependencyManager {
   type PackageT <: Package
-  type DependencyT <: Dependency
 
   // call the algorithm to resolve dependency
-  def resolve(initialConstraints: Iterable[DependencyT]): Option[Iterable[PackageT]]
+  def resolve: Option[Iterable[PackageT]]
 }

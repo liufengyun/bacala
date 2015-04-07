@@ -134,10 +134,9 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
   def artifactId = currentPackage.artifactId
   def version = currentPackage.version
 
-  /**
-    *  parse the POM file and return the dependency constraints
+  /** Parses the POM file and return the dependency constraints
     */
-  def parse(aggregator: PomFile = null): Iterable[MavenDependency] = {
+  def parse(aggregator: PomFile = null): MavenPomFile = {
     if (hasModules) modules = loadModules
 
     var constraints = doParse
@@ -146,9 +145,11 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
       constraints = constraints ++ parent.doParseParent
 
     if (modules != null)
-      constraints = (modules :\ constraints) { (m, acc) => m.parse(this) ++: acc }
+      constraints = (modules :\ constraints) { (m, acc) => m.parse(this).deps ++: acc }
 
-    constraints
+    val repos = (node \ "repositories" \ "repository") map (parseRepository)
+
+    MavenPomFile(currentPackage, constraints, repos)
   }
 
   // get all parents in the chain
@@ -161,8 +162,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     (node \ "dependencies" \ "dependency") map (parseDependency)
   }
 
-  /**
-    * resolve version which can be a property, a range, or defined in parent file
+  /** Resolve version which can be a property, a range, or defined in parent file
     */
   private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
     case Property(prop) =>
@@ -185,8 +185,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
       // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
-  /**
-    * resolve artifact version specified in dependencyManagement section
+  /** Resolves artifact version specified in dependencyManagement section
     */
   private def managedVersionFor(artifact: MavenArtifact): Option[VersionRange] = {
     val deps = (node \ "dependencyManagement" \ "dependencies" \ "dependency")
@@ -197,13 +196,11 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     }.headOption
   }
 
-  /**
-    * whether current POM file has a <parent> section
+  /** Whether current POM file has a <parent> section
     */
   private def hasParent = (node \ "parent").length > 0
 
-  /**
-    * parse the parent section, download POM for parent and create a new PomFile instance
+  /** Parses the parent section, download POM for parent and create a new PomFile instance
     */
   private def loadParent = {
     val groupId = (node \ "parent" \ "groupId").text.trim
@@ -220,13 +217,11 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     }
   }
 
-  /**
-    * whether current POM file has a <modules> section
+  /** Whether current POM file has a <modules> section
     */
   def hasModules = (node \ "modules" \ "module").length > 0
 
-  /**
-    * parse the parent section, download POM for each module and create a new PomFile instance
+  /** Parses the parent section, download POM for each module and create a new PomFile instance
     */
   def loadModules = {
     (node \ "modules" \ "module").map({module =>
@@ -243,16 +238,14 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     }).filter(_ != null)
   }
 
-  /**
-    * if there's no default version for an artifact, use the default version
+  /** if there's no default version for an artifact, use the default version
     */
   def defaultVersion(artifact: MavenArtifact): VersionRange = {
     println("Warning: version unspecified for " + artifact + " in " + currentPackage)
     SimpleRange(Version(0, 0, 0, "", 0))
   }
 
-  /**
-    * parse a single dependency node in /project/dependencies
+  /** Parses a single dependency node in /project/dependencies
     */
   private def parseDependency(dep: Node) = {
     val groupId = (dep \ "groupId").text.trim
@@ -270,8 +263,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     MavenDependency(MavenArtifact(groupId, artifactId), range, exclusions, scope, optional)
   }
 
-  /**
-    * parse exclusion in dependency
+  /** Parses exclusion in dependency
     */
   private def parseExclusion(exclusion: Node) = {
     val groupId = (exclusion \ "groupId").text.trim
@@ -279,15 +271,25 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
 
     MavenArtifact(groupId, artifactId)
   }
-}
-
-trait MavenPomParser extends (String => Iterable[MavenDependency]) {
-  def fetcher: MavenPackage => Option[String]
 
   /**
-    * Used to parse a given POM file
+    * Parse repositories in POM file
     */
-  override def apply(spec: String): Iterable[MavenDependency] = {
+  private def parseRepository(repo: Node) = {
+    val id = (repo \ "id").text.trim
+    val name = (repo \ "name").text.trim
+    val url = (repo \ "url").text.trim
+
+    MavenResolver(id, name, url)
+  }
+}
+
+object MavenPomParser {
+  /** Used to parse a given POM file
+    *
+    * Parser requires a fetcher to get POM files for parent and modules
+    */
+  def apply(spec: String, fetcher: MavenPackage => Option[String]): MavenPomFile = {
     PomFile(spec)(fetcher).parse()
   }
 }

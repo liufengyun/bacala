@@ -1,47 +1,32 @@
 package bacala.maven
 
-/**
-  * Fetch the POM file of a package from repository
-  *
-  * TODO:
-  *  - cache the same query in file system for a period
-  *  - multiple repos;
-  *  - retries logic;
+import bacala.util._
+
+/** Fetches POM for a package
   */
+class PomFetcher(base: String) extends Worker[MavenPackage, String] {
+  override def apply(p: MavenPackage) = HttpFetcher.get(pomURL(p))
 
-import scalaj.http._
-
-
-object MavenFetcher extends (MavenPackage => Option[String]) {
-  val MavenRepoBase = "http://repo1.maven.org/maven2"
-
-  override def apply(p: MavenPackage) = getResponse(pomURL(p))
-
-  def getMetaData(artifact: MavenArtifact) = getResponse(metaDataURL(artifact))
-
-  def getResponse(url: String) = {
-    println("Downloading " + url)
-    val response = Http(url).asString
-
-    if (response.code == 200) Some(response.body) else {
-      println("Error: failed to download " + url)
-      None
-    }
-  }
-
-  /**
-    * returns POM URL for a package
+  /** Returns POM URL for a package
     *
     * Format: $BASE_REPO/:groupId/:artifactId/:version/:artifactId-version.pom
     *
     * e.g. http://repo1.maven.org/maven2/org/scala-lang/scala-library/2.11.6/scala-library-2.11.6.pom
     */
   def pomURL(p: MavenPackage) = {
-    s"${MavenRepoBase}/${p.groupId.replace(".", "/")}/${p.artifactId}/${p.version}/${p.artifactId}-${p.version}.pom"
+    s"${base}/${p.groupId.replace(".", "/")}/${p.artifactId}/${p.version}/${p.artifactId}-${p.version}.pom"
   }
+}
 
-  /**
-    * returns the meta-data URL for an artifact
+
+/** Fetches Meta file for an artifact
+  */
+class MetaFetcher(base: String) extends Worker[MavenArtifact, String] {
+  /** Fetches the Meta file
+    */
+  override def apply(artifact: MavenArtifact) = HttpFetcher.get(metaDataURL(artifact))
+
+  /** Returns the meta-data URL for an artifact
     *
     * Format:  $BASE_REPO/:groupId/:artifactId/maven-metadata.xml
     *
@@ -49,6 +34,6 @@ object MavenFetcher extends (MavenPackage => Option[String]) {
     * http://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml
     */
   def metaDataURL(artifact: MavenArtifact) = {
-    s"${MavenRepoBase}/${artifact.groupId.replace(".", "/")}/${artifact.artifactId}/maven-metadata.xml"
+    s"${base}/${artifact.groupId.replace(".", "/")}/${artifact.artifactId}/maven-metadata.xml"
   }
 }

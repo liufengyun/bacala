@@ -7,9 +7,9 @@ abstract class Repository {
   type PackageT <: Package
   type ConflictT = (PackageT, PackageT)
 
-  /** Returns initial constraints for the repository
+  /** Returns the root package for the repository
     */
-  def seeds: Iterable[Iterable[PackageT]]
+  def root: PackageT
 
   /** Returns the packages that p depends on directly
     */

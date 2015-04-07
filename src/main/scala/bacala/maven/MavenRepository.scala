@@ -5,98 +5,63 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.concurrent.TrieMap
 
 import bacala.core._
+import bacala.util.Worker
 import Scope._
 
-case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
-  override def id =  groupId + ":" + artifactId
-
-  override def toString = id
-}
-
-/**
-  * Reference
-  * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
+/** Constructs the repository from initial constraints
   */
-case class MavenDependency(artifact: MavenArtifact, versionRange: VersionRange, exclusions: Iterable[MavenArtifact], scope: Scope, optional:Boolean) extends Dependency {
-  type PackageT = MavenPackage
-
-  // whether current dependency can be excluded
-  def canExclude(exclusions: Iterable[MavenArtifact]) = exclusions.exists { exclude =>
-    (exclude == this.artifact) ||
-    (exclude.groupId == this.artifact.groupId && exclude.artifactId == "*") ||
-    (exclude.groupId == "*" && exclude.artifactId == "*")
-  }
-
-  // packages compatible with this dependency
-  def resolve(versions: Iterable[String]): Iterable[PackageT] = {
-    val compatibleVersions = versions.filter(v => versionRange.contains(Version(v)))
-    compatibleVersions.map(v => MavenPackage(artifact, v)).toSet
-  }
-}
-
-case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {
-  def artifactId = artifact.artifactId
-  def groupId = artifact.groupId
-}
-
-class MavenRepository(initialDeps: Iterable[MavenDependency])(parser: MavenPackage => Option[Iterable[MavenDependency]], metaParser: MavenArtifact => Option[Iterable[String]]) extends Repository {
+class MavenRepository(initial: MavenPomFile)(parser: Worker[MavenPackage, MavenPomFile], metaParser: Worker[MavenArtifact, Iterable[String]]) extends Repository {
   type PackageT = MavenPackage
   type DependenciesT = Set[Set[PackageT]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
   private val artifactsMap = new TrieMap[MavenArtifact, Set[PackageT]]
-  private var initialSets = Set[Set[PackageT]]()
 
-  /** Returns initial constraints
-    */
-  override def seeds = initialSets
+  // the root package
+  def root = initial.pkg
 
   def construct(scope: Scope) = {
-    for {
-      dep <- initialDeps
-      if dep.scope == scope
-      set <- metaParser(dep.artifact).map(dep.resolve(_).toSet)
-    } {
-      initialSets = initialSets + set
-      set.map(resolve(_, dep.exclusions, Set()))
-    }
+    resolve(initial, scope, Set(), Set())
 
     createConflicts
   }
 
   /** recursively builds the dependency closure
     */
-  def resolve(p: MavenPackage, excludes: Iterable[MavenArtifact], path: Set[MavenPackage]): Unit = {
-    parser(p) map { deps =>
-      deps.filter(dep => dep.scope == COMPILE && !dep.canExclude(excludes) && !dep.optional)
-    } match {
-      case Some(deps) =>
-        // resolve direct dependency
-        val sets = (for {
-          dep <- deps
-          art = dep.artifact
-          set <- metaParser(art).map(dep.resolve(_))
-        } yield set.filter(parser(_).nonEmpty).toSet).toSet
+  def resolve(pom: MavenPomFile, scope: Scope, excludes: Iterable[MavenArtifact], path: Set[MavenPackage]): Unit = {
+    val MavenPomFile(pkg, depsAll, resolvers) = pom
+    val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
-        // excludes in one path may be included in another path
-        dependencies += p -> (sets | dependencies.getOrElse(p, Set()))
+    // use resolvers defined in POM file
+    val metaResolver = (initial.resolvers :\ metaParser) { (r, acc) => acc or Workers.createMetaResolver(r.url) }
+    val pomResolver = (initial.resolvers :\ parser) { (r, acc) => acc or Workers.createPomResolver(r.url) }
 
-        val map = sets zip deps
+    // resolve direct dependency
+    val sets = (for {
+      dep <- deps
+      art = dep.artifact
+      set <- metaResolver(art).map(dep.resolve(_))
+    } yield set.filter(parser(_).nonEmpty).toSet).toSet
 
-        // update conflict set
-        map.foreach { case (set, dep) =>
-          artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
-        }
+    // excludes in one path may be included in another path
+    dependencies += pkg -> (sets | dependencies.getOrElse(pkg, Set()))
 
-        // recursive resolve
-        for {
-          (set, dep) <- map
-          q <- set
-          if !path.contains(q)
-        } resolve(q, dep.exclusions ++ excludes, path + p)
-      case None =>
+    val map = sets zip deps
+
+    // update conflict set
+    map.foreach { case (set, dep) =>
+      artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
     }
+
+    // recursive resolve
+    for {
+      (set, dep) <- map
+      q <- set
+      if !path.contains(q)
+      pom <- pomResolver(q)
+    } resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
+
   }
 
   /** Intialize conflicts structure from repository data
