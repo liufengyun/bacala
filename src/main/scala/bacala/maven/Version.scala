@@ -202,12 +202,14 @@ object IntervalRange {
   val interval2 = """^\s*\[\s*(\S+)\s*,\s*(\S+)\s*\)\s*$""".r
   val interval3 = """^\s*\(\s*(\S+)\s*,\s*(\S+)\s*\]\s*$""".r
   val interval4 = """^\s*\[\s*(\S+)\s*,\s*(\S+)\s*\]\s*$""".r
+  val interval5 = """^\s*\[\s*(\S+)\s*]\s*$""".r
 
   def apply(s: String): IntervalRange = s match {
     case interval1(min, max) => IntervalRange(Version(min), Version(max), false, false)
     case interval2(min, max) => IntervalRange(Version(min), Version(max), true, false)
     case interval3(min, max) => IntervalRange(Version(min), Version(max), false, true)
     case interval4(min, max) => IntervalRange(Version(min), Version(max), true, true)
+    case interval5(v) => IntervalRange(Version(v), Version(v), true, true)
     case _ => throw new InvalidVersionFormat("Unknown version range format: " + s)
   }
 

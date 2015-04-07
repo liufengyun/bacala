@@ -81,6 +81,9 @@ class MavenVersionSuite extends BasicSuite {
 
     assert(VersionRange("(1.0, 2.0)") ===
       IntervalRange(Version(1, 0, 0, "", 0), Version(2, 0, 0, "", 0), false,  false))
+
+    assert(VersionRange("[1.0]") ===
+      IntervalRange(Version(1, 0, 0, "", 0), Version(1, 0, 0, "", 0), true,  true))
   }
 
   test("composite range") {
