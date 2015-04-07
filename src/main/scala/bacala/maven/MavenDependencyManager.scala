@@ -18,11 +18,6 @@ object MavenDependencyManager extends DependencyManager {
       override def makeMetaResolver(url: String) = Workers.createMetaResolver(url)
     }
     repo.construct(Scope.COMPILE)
-    println("*****all packages in repository******")
-    println(repo.packages.mkString("\n"))
-    println("*****all conflicts in repository******")
-    println(repo.conflicts.mkString("\n"))
-    println("*****resolution result******")
   }
 
   def printUsage = {
@@ -43,6 +38,7 @@ object MavenDependencyManager extends DependencyManager {
 
       createRepo(content)
 
+      println("*****resolution result******")
       resolve match {
         case Some(set) => println(set.mkString("\n"))
         case None => println("No solution possible")

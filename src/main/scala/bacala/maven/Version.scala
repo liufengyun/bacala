@@ -28,6 +28,8 @@ case class Version(major:Int, minor:Int, revision:Int, qualifier:String, build:I
                         if (this.build > that.build) false else
                           if (this.build < that.build) true else false
   }
+
+  override def toString = s"$major.$minor.$revision-$qualifier-$build"
 }
 
 class InvalidVersionFormat(msg: String) extends Exception(msg)

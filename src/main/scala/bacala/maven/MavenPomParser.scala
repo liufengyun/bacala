@@ -167,12 +167,12 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
   private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
     case Property(prop) =>
       Property.resolve(node, prop) match {
-        case Some(v) => VersionRange(v)
+        case Some(v) => v
         case None =>
           println("Warning: can't resolve version specification $prop for $artifact in the parent POM of $currentPackage")
           defaultVersion(artifact)
       }
-    case VersionRange(range) => range
+    case VersionRange(range) => ver
     case "" if parent != null =>
       parent.managedVersionFor(artifact) match {  // version specified in parent POM file
         case Some(ver) => ver
@@ -200,7 +200,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
 
   /** Resolves artifact version specified in dependencyManagement section
     */
-  private def managedVersionFor(artifact: MavenArtifact): Option[VersionRange] = {
+  private def managedVersionFor(artifact: MavenArtifact): Option[String] = {
     val deps = (node \ "dependencyManagement" \ "dependencies" \ "dependency")
     deps.filter { dep =>
       artifact == MavenArtifact((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
@@ -253,9 +253,9 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
 
   /** if there's no default version for an artifact, use the default version
     */
-  def defaultVersion(artifact: MavenArtifact): VersionRange = {
-    println("Warning: version unspecified for " + artifact + " in " + currentPackage)
-    SimpleRange(Version(0, 0, 0, "", 0))
+  def defaultVersion(artifact: MavenArtifact) = {
+    println("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using 0.0.0")
+    "0.0.0"
   }
 
   /** Parses a single dependency node in /project/dependencies

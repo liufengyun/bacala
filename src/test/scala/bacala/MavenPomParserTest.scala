@@ -29,8 +29,8 @@ class MavenPomParserSuite extends BasicSuite {
       """, null)
 
     assert(pomFile.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "[2.11.3, 2.11.6)",   List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]",   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -56,7 +56,7 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("[2.11.3, 2.11.3]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "[2.11.3, 2.11.3]",   List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -84,8 +84,8 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)",  List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -131,7 +131,7 @@ scala-library
       """, fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false)
     ))
 
   }
@@ -187,8 +187,8 @@ scala-library
     val pom = MavenPomParser(child, fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("(2.11.0, 2.11.3), (2.11.3, 2.11.6)"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -262,9 +262,9 @@ scala-library
     val pom = MavenPomParser(parent, fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "slick"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -317,8 +317,8 @@ scala-library
     val pom = MavenPomParser(child, fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -396,9 +396,9 @@ scala-library
     val pom = MavenPomParser(child, fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "test-lib"), VersionRange("1.1.1"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "test-lib"), "1.1.1", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -474,9 +474,9 @@ scala-library
     val pom = MavenPomParser(parent, fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("1.6"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "slick"), VersionRange("(1.1.1, 1.2.1]"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false),
+      MavenDependency(MavenArtifact("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -498,7 +498,7 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), VersionRange("0.0.0"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "0.0.0", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
@@ -534,7 +534,7 @@ scala-library
       """, fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.test", "scala-library"), VersionRange("3.2"),   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.test", "scala-library"), "3.2", List[MavenArtifact](), Scope.COMPILE, false)
     ))
 
   }

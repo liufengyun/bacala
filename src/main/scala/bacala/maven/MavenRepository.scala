@@ -28,6 +28,11 @@ abstract class MavenRepository(initial: MavenPomFile, pomParser: Worker[MavenPac
     resolve(initial, scope, Set(), Set())
 
     createConflicts
+
+    println("*****all packages in repository******")
+    println(dependencies.mkString("\n"))
+    println("*****all conflicts in repository******")
+    println(artifactsMap.mkString("\n"))
   }
 
   /** recursively builds the dependency closure
@@ -49,6 +54,12 @@ abstract class MavenRepository(initial: MavenPomFile, pomParser: Worker[MavenPac
       metaResolver(dep.artifact).map(dep.resolve(_)) match {
         case Some(pkgs) =>
           val set = pkgs.toSet
+
+          // set can't be empty for root
+          if (set.isEmpty && pkg == root) {
+            println("Fatal Error: can't find match version for root dependency " + dep)
+            System.exit(1)
+          }
 
           // update dependency set
           dependencies += pkg -> (dependencies.getOrElse(pkg, Set()) + set)
