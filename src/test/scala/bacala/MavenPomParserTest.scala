@@ -502,6 +502,43 @@ scala-library
     ))
   }
 
+  test("parse POM with groupId in parent section") {
+    val fetcher = (p: MavenPackage) => p match {
+      case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(
+        """
+          <project>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>3.2</version>
+          </project>
+          """)
+    }
+
+    val pom = MavenPomParser(
+      """
+      <project>
+          <artifactId>test</artifactId>
+          <parent>
+              <groupId>org.test</groupId>
+              <artifactId>parent</artifactId>
+              <version>3.2</version>
+          </parent>
+          <dependencies>
+              <dependency>
+                  <groupId>${project.groupId}</groupId>
+                  <artifactId>scala-library</artifactId>
+                  <version>3.2</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """, fetcher)
+
+    assert(pom.deps === Seq(
+      MavenDependency(MavenArtifact("org.test", "scala-library"), VersionRange("3.2"),   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+
+  }
+
   test("parse resolvers") {
     val pom = MavenPomParser(
       """

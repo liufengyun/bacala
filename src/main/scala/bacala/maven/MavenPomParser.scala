@@ -185,6 +185,19 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
       // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
+  /** Resolves groupId which could be a property
+    */
+  private def resolveGroupId(gid: String) = gid match {
+    case Property(prop) =>
+      Property.resolve(node, prop) match {
+        case Some(v) => v
+        case None =>
+          println(s"Error: failed to resolve groupId property $gid in $currentPackage - using $groupId")
+          currentPackage.groupId // using groupId of current POM
+      }
+    case _ => gid
+  }
+
   /** Resolves artifact version specified in dependencyManagement section
     */
   private def managedVersionFor(artifact: MavenArtifact): Option[VersionRange] = {
@@ -248,7 +261,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
   /** Parses a single dependency node in /project/dependencies
     */
   private def parseDependency(dep: Node) = {
-    val groupId = (dep \ "groupId").text.trim
+    val groupId = resolveGroupId((dep \ "groupId").text.trim)
     val artifactId = (dep \ "artifactId").text.trim
     val scopeText = (dep \ "scope").text.trim
     val scope = if (scopeText.isEmpty) COMPILE else Scope(scopeText)

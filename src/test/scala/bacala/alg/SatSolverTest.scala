@@ -51,6 +51,5 @@ class SatSolverSuite extends BasicSuite {
       MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4"),
       MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3")
     )))
-
   }
 }
