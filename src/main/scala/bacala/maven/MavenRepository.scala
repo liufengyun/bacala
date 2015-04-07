@@ -34,34 +34,42 @@ class MavenRepository(initial: MavenPomFile)(parser: Worker[MavenPackage, MavenP
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
     // use resolvers defined in POM file
-    val metaResolver = (initial.resolvers :\ metaParser) { (r, acc) => acc or Workers.createMetaResolver(r.url) }
-    val pomResolver = (initial.resolvers :\ parser) { (r, acc) => acc or Workers.createPomResolver(r.url) }
-
-    // resolve direct dependency
-    val sets = (for {
-      dep <- deps
-      art = dep.artifact
-      set <- metaResolver(art).map(dep.resolve(_))
-    } yield set.filter(parser(_).nonEmpty).toSet).toSet
-
-    // excludes in one path may be included in another path
-    dependencies += pkg -> (sets | dependencies.getOrElse(pkg, Set()))
-
-    val map = sets zip deps
-
-    // update conflict set
-    map.foreach { case (set, dep) =>
-      artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
+    val metaResolver = (pom.resolvers :\ metaParser) { (r, acc) =>
+      acc or Workers.createMetaResolver(r.url)
     }
 
-    // recursive resolve
-    for {
-      (set, dep) <- map
-      q <- set
-      if !path.contains(q)
-      pom <- pomResolver(q)
-    } resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
+    val pomResolver = (pom.resolvers :\ parser) { (r, acc) =>
+      acc or Workers.createPomResolver(r.url)
+    }
 
+    deps.foreach { dep =>
+      metaResolver(dep.artifact).map(dep.resolve(_)) match {
+        case Some(pkgs) =>
+          // val set = pkgs.filter(pomResolver(_).nonEmpty).toSet
+          val set = pkgs.toSet
+
+          // update dependency set
+          dependencies += pkg -> (dependencies.getOrElse(pkg, Set()) + set)
+
+          // update conflict set
+          artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
+
+          // recursive resolve
+          for {
+            q <- set
+            if !path.contains(q)
+            pom <- pomResolver(q)
+          } resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
+
+        case None =>
+          if (pkg == root) {
+            println("Fatal Error: Can't resolve root dependency " + dep)
+            System.exit(1)
+          } else {
+            println(s"Warning: Failed to resolve dependency $dep in $pkg")
+          }
+      }
+    }
   }
 
   /** Intialize conflicts structure from repository data
