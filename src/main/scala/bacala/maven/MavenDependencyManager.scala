@@ -13,7 +13,10 @@ object MavenDependencyManager extends DependencyManager {
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.DefaultPomFetcher)
-    repo = new MavenRepository(pom)(Workers.CachedPomFileResolver, Workers.CachedMetaFileResolver)
+    repo = new MavenRepository(pom, Workers.CachedPomFileResolver, Workers.CachedMetaFileResolver) {
+      override def makePomResolver(url: String) = Workers.createPomResolver(url)
+      override def makeMetaResolver(url: String) = Workers.createMetaResolver(url)
+    }
     repo.construct(Scope.COMPILE)
     println("*****all packages in repository******")
     println(repo.packages.mkString("\n"))

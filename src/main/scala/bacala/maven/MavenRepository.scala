@@ -10,9 +10,12 @@ import Scope._
 
 /** Constructs the repository from initial constraints
   */
-class MavenRepository(initial: MavenPomFile)(parser: Worker[MavenPackage, MavenPomFile], metaParser: Worker[MavenArtifact, Iterable[String]]) extends Repository {
+abstract class MavenRepository(initial: MavenPomFile, pomParser: Worker[MavenPackage, MavenPomFile], metaParser: Worker[MavenArtifact, Iterable[String]]) extends Repository {
   type PackageT = MavenPackage
   type DependenciesT = Set[Set[PackageT]]
+
+  def makePomResolver(url: String): MavenPackage => Option[MavenPomFile]
+  def makeMetaResolver(url: String): MavenArtifact => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
@@ -35,17 +38,16 @@ class MavenRepository(initial: MavenPomFile)(parser: Worker[MavenPackage, MavenP
 
     // use resolvers defined in POM file
     val metaResolver = (pom.resolvers :\ metaParser) { (r, acc) =>
-      acc or Workers.createMetaResolver(r.url)
+      acc or makeMetaResolver(r.url)
     }
 
-    val pomResolver = (pom.resolvers :\ parser) { (r, acc) =>
-      acc or Workers.createPomResolver(r.url)
+    val pomResolver = (pom.resolvers :\ pomParser) { (r, acc) =>
+      acc or makePomResolver(r.url)
     }
 
     deps.foreach { dep =>
       metaResolver(dep.artifact).map(dep.resolve(_)) match {
         case Some(pkgs) =>
-          // val set = pkgs.filter(pomResolver(_).nonEmpty).toSet
           val set = pkgs.toSet
 
           // update dependency set
@@ -55,12 +57,17 @@ class MavenRepository(initial: MavenPomFile)(parser: Worker[MavenPackage, MavenP
           artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
 
           // recursive resolve
-          for {
-            q <- set
-            if !path.contains(q)
-            pom <- pomResolver(q)
-          } resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
+          set.filter(!path.contains(_)).foreach { p =>
+            // important: initialize dependency
+            dependencies.getOrElseUpdate(p, Set())
 
+            pomResolver(p) match {
+              case Some(pom) =>
+                resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
+              case None =>
+                println(s"Error: failed to download POM file for $p")
+            }
+          }
         case None =>
           if (pkg == root) {
             println("Fatal Error: Can't resolve root dependency " + dep)
