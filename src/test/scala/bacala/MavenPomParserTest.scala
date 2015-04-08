@@ -520,7 +520,7 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "0.0.0", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(0.0.0,)", List[MavenArtifact](), Scope.COMPILE, false)
     ))
   }
 
