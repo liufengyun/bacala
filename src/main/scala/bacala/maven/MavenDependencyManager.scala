@@ -1,6 +1,7 @@
 package bacala.maven
 
 import bacala.core._
+import bacala.util.Worker
 import bacala.alg.SatSolver
 
 object MavenDependencyManager extends DependencyManager {
@@ -13,9 +14,15 @@ object MavenDependencyManager extends DependencyManager {
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.DefaultPomFetcher)
-    repo = new MavenRepository(pom, Workers.CachedPomFileResolver, Workers.CachedMetaFileResolver) {
-      override def makePomResolver(url: String) = Workers.createPomResolver(url)
-      override def makeMetaResolver(url: String) = Workers.createMetaResolver(url)
+    repo = new MavenRepository(pom) {
+      override def initPomFetcher = Workers.DefaultPomFetcher
+      override def initMetaFetcher = Workers.DefaultMetaFetcher
+      override def initPomResolver = Workers.CachedPomFileResolver
+      override def initMetaResolver = Workers.CachedMetaFileResolver
+      override def makePomFetcher(url: String) = Workers.createPomFetcher(url)
+      override def makeMetaFetcher(url: String) = Workers.createMetaFetcher(url)
+      override def makePomResolver(fetcher: Worker[MavenPackage, String]) = Workers.createPomResolver(fetcher)
+      override def makeMetaResolver(fetcher: Worker[MavenArtifact, String]) = Workers.createMetaResolver(fetcher)
     }
     repo.construct(Scope.COMPILE)
   }

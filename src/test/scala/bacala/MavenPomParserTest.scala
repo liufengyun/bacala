@@ -34,6 +34,28 @@ class MavenPomParserSuite extends BasicSuite {
     ))
   }
 
+  test("parse POM with dependency default version the same as package if they are the same group") {
+    val pomFile = MavenPomParser(
+      """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>test</artifactId>
+          <version>2.4</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>config</artifactId>
+              </dependency>
+          </dependencies>
+      </project>
+      """, null)
+
+    assert(pomFile.deps === Seq(
+      MavenDependency(MavenArtifact("org.test", "config"), "2.4",   List[MavenArtifact](), Scope.COMPILE, false)
+    ))
+  }
+
+
   test("test new line and space in specification") {
     val pom = MavenPomParser(
       """

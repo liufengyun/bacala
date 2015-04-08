@@ -10,12 +10,19 @@ import Scope._
 
 /** Constructs the repository from initial constraints
   */
-abstract class MavenRepository(initial: MavenPomFile, pomParser: Worker[MavenPackage, MavenPomFile], metaParser: Worker[MavenArtifact, Iterable[String]]) extends Repository {
+abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   type PackageT = MavenPackage
   type DependenciesT = Set[Set[PackageT]]
 
-  def makePomResolver(url: String): MavenPackage => Option[MavenPomFile]
-  def makeMetaResolver(url: String): MavenArtifact => Option[Iterable[String]]
+  // fetchers and resolvers
+  def initPomFetcher: Worker[MavenPackage, String]
+  def initMetaFetcher: Worker[MavenArtifact, String]
+  def initPomResolver: Worker[MavenPackage, MavenPomFile]
+  def initMetaResolver: Worker[MavenArtifact, Iterable[String]]
+  def makePomFetcher(url: String): Worker[MavenPackage, String]
+  def makeMetaFetcher(url: String): Worker[MavenArtifact, String]
+  def makePomResolver(fetcher: Worker[MavenPackage, String]): Worker[MavenPackage, MavenPomFile]
+  def makeMetaResolver(fetcher: Worker[MavenArtifact, String]): Worker[MavenArtifact, Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
@@ -42,13 +49,17 @@ abstract class MavenRepository(initial: MavenPomFile, pomParser: Worker[MavenPac
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
     // use resolvers defined in POM file
-    val metaResolver = (pom.resolvers :\ metaParser) { (r, acc) =>
-      acc or makeMetaResolver(r.url)
+    val metaFetcher = (pom.resolvers :\ initMetaFetcher) { (r, acc) =>
+      acc or makeMetaFetcher(r.url)
     }
 
-    val pomResolver = (pom.resolvers :\ pomParser) { (r, acc) =>
-      acc or makePomResolver(r.url)
+    val pomFetcher = (pom.resolvers :\ initPomFetcher) { (r, acc) =>
+      acc or makePomFetcher(r.url)
     }
+
+    // chain with initMetaResolver to enable caching
+    val metaResolver = initMetaResolver or makeMetaResolver(metaFetcher)
+    val pomResolver = initPomResolver or makePomResolver(pomFetcher)
 
     deps.foreach { dep =>
       metaResolver(dep.artifact).map(dep.resolve(_)) match {

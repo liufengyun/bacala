@@ -254,8 +254,9 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
   /** if there's no default version for an artifact, use the default version
     */
   def defaultVersion(artifact: MavenArtifact) = {
-    println("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using 0.0.0")
-    "0.0.0"
+    val ver = if (artifact.groupId == groupId) version else "0.0.0"
+    println("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using " + ver)
+    ver
   }
 
   /** Parses a single dependency node in /project/dependencies
