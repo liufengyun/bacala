@@ -1,7 +1,7 @@
-package bacala.test
+package bacala.test.maven
 
 import scala.xml.XML
-import org.scalatest._
+import bacala.test._
 import bacala.maven._
 
 class MavenFetcherSuite extends BasicSuite {

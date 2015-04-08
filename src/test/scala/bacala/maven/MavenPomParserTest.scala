@@ -1,6 +1,6 @@
-package bacala.test
+package bacala.test.maven
 
-import org.scalatest._
+import bacala.test._
 import bacala.maven._
 import scala.xml.XML
 

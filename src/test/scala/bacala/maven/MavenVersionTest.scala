@@ -1,7 +1,8 @@
-package bacala.test
+package bacala.test.maven
 
-import org.scalatest._
+import bacala.test._
 import bacala.maven._
+import bacala.test._
 
 class MavenVersionSuite extends BasicSuite {
 
