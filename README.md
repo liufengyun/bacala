@@ -2,8 +2,6 @@
 
 Bacala is an experimental package dependency manager for Scala projects.
 
-The ultimate goal is to replace *Ivy* in Sbt with *Bacala*, when the latter matures and performs better.
-
 ## Project Objective
 
 The objective of this project is:
@@ -35,10 +33,13 @@ The input XML is a POM file.
   - [ ] support excludes in POM
   - [ ] support SNAPSHOT versioning
 - [ ] resolve dependency via SAT solver
+  - [x] find an assignment or answer impossible
+  - [ ] find the minimal conflict set
+  - [ ] find the optimal solution according to weighted value
 - [ ] support multiple resolvers
-  - [ ] support chaining resolvers
+  - [x] support chaining resolvers
   - [ ] support FileSystem resolvers
-  - [ ] support URL resolvers
+  - [x] support URL resolvers
   - [ ] support SFTP resolvers
   - [ ] support SSH resolvers
   - [ ] support path pattern for configuration XML file
