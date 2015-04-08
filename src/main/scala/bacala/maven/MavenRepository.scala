@@ -15,8 +15,8 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   type DependenciesT = Set[Set[PackageT]]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MavenResolver]): Worker[MavenPackage, MavenPomFile]
-  def makeMetaResolver(resolvers: Iterable[MavenResolver]): Worker[MavenArtifact, Iterable[String]]
+  def makePomResolver(resolvers: Iterable[MavenResolver]): MavenPackage => Option[MavenPomFile]
+  def makeMetaResolver(resolvers: Iterable[MavenResolver]): MavenArtifact => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
@@ -25,6 +25,8 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   // the root package
   def root = initial.pkg
 
+  /** Builds the repository from initial constraints
+    */
   def construct(scope: Scope) = {
     resolve(initial, scope, Set(), Set())
 
@@ -34,6 +36,14 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     println(dependencies.mkString("\n"))
     println("\n\n######## all conflicts in repository #########")
     println(artifactsMap.mkString("\n"))
+  }
+
+  /** Resets the repository to empty
+    */
+  def reset = {
+    dependencies.clear
+    conflictSet.clear
+    artifactsMap.clear
   }
 
   /** recursively builds the dependency closure
