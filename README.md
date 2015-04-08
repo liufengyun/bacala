@@ -30,14 +30,14 @@ The input XML is a POM file.
   - [x] support reading version constraint from parent POM file
   - [x] inherit dependencies from parent POM file
   - [x] support aggregating dependencies from multiple mudules
+  - [x] support chaining multiple repositories
   - [ ] support excludes in POM
   - [ ] support SNAPSHOT versioning
 - [ ] resolve dependency via SAT solver
   - [x] find an assignment or answer impossible
   - [ ] find the minimal conflict set
   - [ ] find the optimal solution according to weighted value
-- [ ] support multiple resolvers
-  - [x] support chaining resolvers
+- [ ] support multiple resolver types
   - [ ] support FileSystem resolvers
   - [x] support URL resolvers
   - [ ] support SFTP resolvers
@@ -47,6 +47,16 @@ The input XML is a POM file.
 - [ ] support Ivy configuration file
   - [ ] support force a specific package
   - [ ] support configuration
+  - [ ] support custom conflict management
+- [ ] support sbt file
+  - [ ] support configurations
+  - [ ] support chaining resolvers
+  - [ ] support exludes
+  - [ ] support force
+  - [ ] support `intransitive` dependency
+  - [ ] support direct dependency via `from`
+  - [ ] support scala version in dependency constraint
+  - [ ] support classifiers
   - [ ] support custom conflict management
 - [ ] support download resources via Futures in parallel
 - [ ] resolve result visualization in html
