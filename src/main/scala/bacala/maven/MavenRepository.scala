@@ -14,15 +14,9 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   type PackageT = MavenPackage
   type DependenciesT = Set[Set[PackageT]]
 
-  // fetchers and resolvers
-  def initPomFetcher: Worker[MavenPackage, String]
-  def initMetaFetcher: Worker[MavenArtifact, String]
-  def initPomResolver: Worker[MavenPackage, MavenPomFile]
-  def initMetaResolver: Worker[MavenArtifact, Iterable[String]]
-  def makePomFetcher(url: String): Worker[MavenPackage, String]
-  def makeMetaFetcher(url: String): Worker[MavenArtifact, String]
-  def makePomResolver(fetcher: Worker[MavenPackage, String]): Worker[MavenPackage, MavenPomFile]
-  def makeMetaResolver(fetcher: Worker[MavenArtifact, String]): Worker[MavenArtifact, Iterable[String]]
+  // resolvers
+  def makePomResolver(resolvers: Iterable[MavenResolver]): Worker[MavenPackage, MavenPomFile]
+  def makeMetaResolver(resolvers: Iterable[MavenResolver]): Worker[MavenArtifact, Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
@@ -48,18 +42,9 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     val MavenPomFile(pkg, depsAll, resolvers) = pom
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
-    // use resolvers defined in POM file
-    val metaFetcher = (pom.resolvers :\ initMetaFetcher) { (r, acc) =>
-      acc or makeMetaFetcher(r.url)
-    }
-
-    val pomFetcher = (pom.resolvers :\ initPomFetcher) { (r, acc) =>
-      acc or makePomFetcher(r.url)
-    }
-
-    // chain with initMetaResolver to enable caching
-    val metaResolver = initMetaResolver or makeMetaResolver(metaFetcher)
-    val pomResolver = initPomResolver or makePomResolver(pomFetcher)
+    // the resolvers will be added to the default resolver
+    val metaResolver = makeMetaResolver(resolvers)
+    val pomResolver = makePomResolver(resolvers)
 
     deps.foreach { dep =>
       metaResolver(dep.artifact).map(dep.resolve(_)) match {

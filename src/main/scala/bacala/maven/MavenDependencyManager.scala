@@ -15,15 +15,23 @@ object MavenDependencyManager extends DependencyManager {
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.DefaultPomFetcher)
     repo = new MavenRepository(pom) {
-      override def initPomFetcher = Workers.DefaultPomFetcher
-      override def initMetaFetcher = Workers.DefaultMetaFetcher
-      override def initPomResolver = Workers.PomFileResolverCache
-      override def initMetaResolver = Workers.MetaFileResolverCache
-      override def makePomFetcher(url: String) = Workers.createPomFetcher(url)
-      override def makeMetaFetcher(url: String) = Workers.createMetaFetcher(url)
-      override def makePomResolver(fetcher: Worker[MavenPackage, String]) = Workers.createPomResolver(fetcher)
-      override def makeMetaResolver(fetcher: Worker[MavenArtifact, String]) = Workers.createMetaResolver(fetcher)
+      override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
+        val fetcher = (resolvers :\ Workers.DefaultPomFetcher) { (r, acc) =>
+          acc or Workers.createPomFetcher(r.url)
+        }
+
+        Workers.PomFileResolverCache or Workers.createPomResolver(fetcher)
+      }
+
+      override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
+        val fetcher = (resolvers :\ Workers.DefaultMetaFetcher) { (r, acc) =>
+          acc or Workers.createMetaFetcher(r.url)
+        }
+
+        Workers.MetaFileResolverCache or Workers.createMetaResolver(fetcher)
+      }
     }
+
     repo.construct(Scope.COMPILE)
   }
 
