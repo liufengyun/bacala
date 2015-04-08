@@ -6,57 +6,35 @@ import bacala.util._
 /** Workers factory
   */
 object Workers {
-  object CachedMetaFileResolver extends CachedWorker[MavenArtifact, Iterable[String]] {
-    override val worker = new Worker[MavenArtifact, Iterable[String]] {
-      override def apply(artf: MavenArtifact) = {
-        DefaultMetaFetcher(artf).map(meta => MetaFileParser(meta))
-      }
-    }
+  object MetaFileResolverCache extends CachedWorker[MavenArtifact, Iterable[String]] with MemoryBase[MavenArtifact, Iterable[String]]
 
-    override val cache = new MemoryCache[MavenArtifact, Option[Iterable[String]]] {}
-  }
-
-  object CachedPomFileResolver extends CachedWorker[MavenPackage, MavenPomFile] {
-    override val worker = new Worker[MavenPackage, MavenPomFile] {
-      override def apply(pkg: MavenPackage) = {
-        DefaultPomFetcher(pkg).map(spec => MavenPomParser(spec, DefaultPomFetcher))
-      }
-    }
-
-    override val cache = new MemoryCache[MavenPackage, Option[MavenPomFile]] {}
-  }
+  object PomFileResolverCache extends CachedWorker[MavenPackage, MavenPomFile] with MemoryBase[MavenPackage, MavenPomFile]
 
   val mavenMainBase = "http://repo1.maven.org/maven2"
 
   /** Fetches POM file from the Maven main repository
     */
-  object DefaultPomFetcher extends CachedWorker[MavenPackage, String] {
-    override val worker = new PomFetcher(mavenMainBase)
-    override val cache = new MemoryCache[MavenPackage, Option[String]] {}
-  }
+  val DefaultPomFetcher = PomFetchers(mavenMainBase)
 
   /** Fetches Meta file from the Maven main repository
     */
-  object DefaultMetaFetcher extends CachedWorker[MavenArtifact, String] {
-    override val worker = new MetaFetcher(mavenMainBase)
-    override val cache = new MemoryCache[MavenArtifact, Option[String]] {}
-  }
+  val DefaultMetaFetcher = MetaFetchers(mavenMainBase)
 
   /** Cache and reuses the POM fetchers
     */
   object PomFetchers extends MemoryCache[String, Worker[MavenPackage, String]] {
-    def apply(url: String) = fetch(url, new CachedWorker[MavenPackage, String] {
+    def apply(url: String) = fetch(url, new CachedWorker[MavenPackage, String] with
+      MemoryBase[MavenPackage, String] {
       override val worker = new PomFetcher(url)
-      override val cache = new MemoryCache[MavenPackage, Option[String]] {}
     })
   }
 
   /** Cache and reuses the Meta fetchers
     */
   object MetaFetchers extends MemoryCache[String, Worker[MavenArtifact, String]] {
-    def apply(url: String) = fetch(url, new CachedWorker[MavenArtifact, String] {
+    def apply(url: String) = fetch(url, new CachedWorker[MavenArtifact, String] with
+      MemoryBase[MavenArtifact, String] {
       override val worker = new MetaFetcher(url)
-      override val cache = new MemoryCache[MavenArtifact, Option[String]] {}
     })
   }
 

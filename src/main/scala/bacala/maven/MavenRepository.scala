@@ -36,9 +36,9 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
     createConflicts
 
-    println("*****all packages in repository******")
+    println("\n\n######## all packages in repository #########")
     println(dependencies.mkString("\n"))
-    println("*****all conflicts in repository******")
+    println("\n\n######## all conflicts in repository #########")
     println(artifactsMap.mkString("\n"))
   }
 

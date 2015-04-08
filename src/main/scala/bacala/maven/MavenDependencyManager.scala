@@ -17,8 +17,8 @@ object MavenDependencyManager extends DependencyManager {
     repo = new MavenRepository(pom) {
       override def initPomFetcher = Workers.DefaultPomFetcher
       override def initMetaFetcher = Workers.DefaultMetaFetcher
-      override def initPomResolver = Workers.CachedPomFileResolver
-      override def initMetaResolver = Workers.CachedMetaFileResolver
+      override def initPomResolver = Workers.PomFileResolverCache
+      override def initMetaResolver = Workers.MetaFileResolverCache
       override def makePomFetcher(url: String) = Workers.createPomFetcher(url)
       override def makeMetaFetcher(url: String) = Workers.createMetaFetcher(url)
       override def makePomResolver(fetcher: Worker[MavenPackage, String]) = Workers.createPomResolver(fetcher)
@@ -45,7 +45,7 @@ object MavenDependencyManager extends DependencyManager {
 
       createRepo(content)
 
-      println("*****resolution result******")
+      println("\n\n######## resolution result #########")
       resolve match {
         case Some(set) => println(set.mkString("\n"))
         case None => println("No solution possible")
