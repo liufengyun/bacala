@@ -31,7 +31,7 @@ The input XML is a POM file.
   - [x] inherit dependencies from parent POM file
   - [x] support aggregating dependencies from multiple mudules
   - [x] support chaining multiple repositories
-  - [ ] support excludes in POM
+  - [x] support excludes in POM
   - [ ] support SNAPSHOT versioning
 - [ ] resolve dependency via SAT solver
   - [x] find an assignment or answer impossible
