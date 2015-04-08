@@ -78,34 +78,6 @@ object Property {
   }
 }
 
-// create an POM file object
-object PomFile {
-  def apply(spec: String)(implicit fetcher: MavenPackage => Option[String]) = {
-    val node = XML.loadString(spec)
-    val artifactId = (node \ "artifactId").text.trim
-    // version and groupId may be inherited from /project/parent
-    val groupId = resolveGroupId(node)
-    val version = resolveVersion(node)
-
-    val pkg = MavenPackage(MavenArtifact(groupId, artifactId), version)
-    new PomFile(pkg, node)(fetcher)
-  }
-
-  def resolveVersion(node: Node) = {
-    val version = (node \ "version").text.trim
-
-    if (!version.isEmpty) version else
-      (node \ "parent" \ "version").text.trim
-  }
-
-  def resolveGroupId(node: Node) = {
-    val groupId = (node \ "groupId").text.trim
-
-    if (!groupId.isEmpty) groupId else
-      (node \ "parent" \ "groupId").text.trim
-  }
-}
-
 /**
   * Parse POM XML file into constraint objects
   *
@@ -126,9 +98,15 @@ object PomFile {
   *
   */
 
-class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher: MavenPackage => Option[String]) {
-  val parent: PomFile  = if (hasParent) loadParent else null
-  var modules: Seq[PomFile] = null // only load modules when needed
+class PomFile(val node: Node) {
+  type Fetcher = MavenPackage => Option[String]
+
+  var parent: PomFile = null
+  var modules: Seq[PomFile] = null
+
+  // parse on initialization
+  val repositories = (node \ "repositories" \ "repository") map (parseRepository)
+  val currentPackage = parseBasicInfo(node)
 
   def groupId = currentPackage.groupId
   def artifactId = currentPackage.artifactId
@@ -136,8 +114,9 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
 
   /** Parses the POM file and return the dependency constraints
     */
-  def parse(aggregator: PomFile = null): MavenPomFile = {
-    if (hasModules) modules = loadModules
+  def parse(aggregator: PomFile = null)(implicit fetcher: Fetcher): MavenPomFile = {
+    if (hasParent) parent = loadParent(fetcher)
+    if (hasModules) modules = loadModules(fetcher)
 
     var constraints = doParse
 
@@ -147,13 +126,14 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     if (modules != null)
       constraints = (modules :\ constraints) { (m, acc) => m.parse(this).deps ++: acc }
 
-    val repos = (node \ "repositories" \ "repository") map (parseRepository)
-
-    MavenPomFile(currentPackage, constraints, repos)
+    MavenPomFile(currentPackage, constraints, repositories)
   }
 
   // get all parents in the chain
-  def doParseParent: Iterable[MavenDependency] = {
+  def doParseParent(implicit fetcher: Fetcher): Iterable[MavenDependency] = {
+    // we need to load parent here because *parse* is not called for current instance
+    if (parent == null && hasParent) parent = loadParent(fetcher)
+
     if (parent == null) doParse else doParse ++ parent.doParseParent
   }
 
@@ -209,19 +189,35 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     }.headOption
   }
 
+  /** Parses groupId, artifactId and version in POM file
+    */
+  def parseBasicInfo(node: Node) = {
+    var version = (node \ "version").text.trim
+    if (version.isEmpty)
+      version = (node \ "parent" \ "version").text.trim
+
+    var groupId = (node \ "groupId").text.trim
+    if (groupId.isEmpty)
+      groupId = (node \ "parent" \ "groupId").text.trim
+
+    val artifactId = (node \ "artifactId").text.trim
+
+    MavenPackage(MavenArtifact(groupId, artifactId), version)
+  }
+
   /** Whether current POM file has a <parent> section
     */
   private def hasParent = (node \ "parent").length > 0
 
   /** Parses the parent section, download POM for parent and create a new PomFile instance
     */
-  private def loadParent = {
+  private def loadParent(fetcher: Fetcher) = {
     val groupId = (node \ "parent" \ "groupId").text.trim
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
     fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
-      PomFile(spec)(fetcher)
+      PomFile(spec)
     } match {
       case Some(pom) => pom
       case None =>
@@ -236,12 +232,12 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
 
   /** Parses the parent section, download POM for each module and create a new PomFile instance
     */
-  def loadModules = {
+  def loadModules(fetcher: Fetcher) = {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
       fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
-        PomFile(spec)(fetcher)
+        PomFile(spec)
       } match {
         case Some(pom) => pom
         case None =>
@@ -286,8 +282,7 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
     MavenArtifact(groupId, artifactId)
   }
 
-  /**
-    * Parse repositories in POM file
+  /** Parses repositories in POM file
     */
   private def parseRepository(repo: Node) = {
     val id = (repo \ "id").text.trim
@@ -298,12 +293,25 @@ class PomFile(val currentPackage: MavenPackage, val node: Node)(implicit fetcher
   }
 }
 
+object PomFile {
+  def apply(spec: String) = {
+    val node = XML.loadString(spec)
+    new PomFile(node)
+  }
+}
+
 object MavenPomParser {
+  type Fetcher = MavenPackage => Option[String]
+  type FetcherMaker = Iterable[MavenResolver] => Fetcher
+
   /** Used to parse a given POM file
     *
     * Parser requires a fetcher to get POM files for parent and modules
     */
-  def apply(spec: String, fetcher: MavenPackage => Option[String]): MavenPomFile = {
-    PomFile(spec)(fetcher).parse()
+  def apply(spec: String, maker: FetcherMaker): MavenPomFile = {
+    val pom = PomFile(spec)
+
+    implicit val fetcher = if (maker != null) maker(pom.repositories) else null
+    pom.parse()
   }
 }

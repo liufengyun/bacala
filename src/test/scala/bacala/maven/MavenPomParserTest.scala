@@ -150,7 +150,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """, fetcher)
+      """, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false)
@@ -206,7 +206,7 @@ scala-library
       case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(parent)
     }
 
-    val pom = MavenPomParser(child, fetcher)
+    val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false),
@@ -281,7 +281,7 @@ scala-library
       case _ => None
     }
 
-    val pom = MavenPomParser(parent, fetcher)
+    val pom = MavenPomParser(parent, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
@@ -336,7 +336,7 @@ scala-library
       case _ => None
     }
 
-    val pom = MavenPomParser(child, fetcher)
+    val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
@@ -348,7 +348,7 @@ scala-library
     val grandParent = """
       <project>
           <groupId>org.test</groupId>
-          <artifactId>parentParent</artifactId>
+          <artifactId>grandParent</artifactId>
           <version>1.2</version>
           <dependencies>
               <dependency>
@@ -415,7 +415,7 @@ scala-library
       case _ => None
     }
 
-    val pom = MavenPomParser(child, fetcher)
+    val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
       MavenDependency(MavenArtifact("org.scala-lang", "test-lib"), "1.1.1", List[MavenArtifact](), Scope.COMPILE, false),
@@ -493,7 +493,7 @@ scala-library
       case _ => None
     }
 
-    val pom = MavenPomParser(parent, fetcher)
+    val pom = MavenPomParser(parent, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
       MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
@@ -553,7 +553,7 @@ scala-library
               </dependency>
           </dependencies>
       </project>
-      """, fetcher)
+      """, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
       MavenDependency(MavenArtifact("org.test", "scala-library"), "3.2", List[MavenArtifact](), Scope.COMPILE, false)
@@ -686,7 +686,7 @@ scala-library
       </project>
       """
 
-    assert(PomFile.resolveVersion(XML.loadString(xml)) === "4.3")
+    assert(PomFile(xml).version === "4.3")
   }
 
   test("test groupId resolution via parent") {
@@ -706,6 +706,6 @@ scala-library
       </project>
       """
 
-    assert(PomFile.resolveGroupId(XML.loadString(xml)) === "org.test")
+    assert(PomFile(xml).groupId === "org.test")
   }
 }

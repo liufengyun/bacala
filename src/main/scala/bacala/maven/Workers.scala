@@ -46,6 +46,22 @@ object Workers {
     */
   def createMetaFetcher(url: String) = MetaFetchers(url)
 
+  /** Creates a chain of POM fetchers
+    */
+  def chainPomFetchers(initial: Worker[MavenPackage, String])(resolvers: Iterable[MavenResolver]) = {
+    (resolvers :\ initial) { (r, acc) =>
+      acc or Workers.createPomFetcher(r.url)
+    }
+  }
+
+  /** Creates a chain of Meta fetchers
+    */
+  def chainMetaFetchers(initial: Worker[MavenArtifact, String])(resolvers: Iterable[MavenResolver]) = {
+    (resolvers :\ initial) { (r, acc) =>
+      acc or Workers.createMetaFetcher(r.url)
+    }
+  }
+
   /** Creates new POM file resolver
     *
     * Problem: now for the POM parser, it can only use a single fetcher, unable to chain them
@@ -53,7 +69,7 @@ object Workers {
     */
   def createPomResolver(fetcher: Worker[MavenPackage, String]) = new Worker[MavenPackage, MavenPomFile] {
     override def apply(pkg: MavenPackage) = {
-      fetcher(pkg).map(spec => MavenPomParser(spec, fetcher))
+      fetcher(pkg).map(spec => MavenPomParser(spec, chainPomFetchers(fetcher)))
     }
   }
 

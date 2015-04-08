@@ -13,21 +13,15 @@ object MavenDependencyManager extends DependencyManager {
   }
 
   def createRepo(spec: String) = {
-    val pom = MavenPomParser(spec, Workers.DefaultPomFetcher)
+    val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))
     repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        val fetcher = (resolvers :\ Workers.DefaultPomFetcher) { (r, acc) =>
-          acc or Workers.createPomFetcher(r.url)
-        }
-
+        val fetcher = Workers.chainPomFetchers(Workers.DefaultPomFetcher)(resolvers)
         Workers.PomFileResolverCache or Workers.createPomResolver(fetcher)
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        val fetcher = (resolvers :\ Workers.DefaultMetaFetcher) { (r, acc) =>
-          acc or Workers.createMetaFetcher(r.url)
-        }
-
+        val fetcher = Workers.chainMetaFetchers(Workers.DefaultMetaFetcher)(resolvers)
         Workers.MetaFileResolverCache or Workers.createMetaResolver(fetcher)
       }
     }
