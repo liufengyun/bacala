@@ -97,6 +97,191 @@ class MavenRepositorySuite extends BasicSuite {
     assert(repo.packages.size === 3)
   }
 
+  test("pattern to exclude all transitive dependencies via *") {
+    val root = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>root</artifactId>
+          <version>1.2</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>B</artifactId>
+                  <version>1.0</version>
+                  <exclusions>
+                      <exclusion>
+                          <groupId>*</groupId>
+                          <artifactId>*</artifactId>
+                      </exclusion>
+                  </exclusions>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val b = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>B</artifactId>
+          <version>1.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>C</artifactId>
+                  <version>1.3</version>
+              </dependency>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val c = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>C</artifactId>
+          <version>1.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+          """
+
+    val d = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>D</artifactId>
+          <version>2.3</version>
+      </project>
+          """
+
+    val fetcher = (p: MavenPackage) => p match {
+      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
+      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
+      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
+      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+      case _ => None
+    }
+
+    val pom = MavenPomParser(root, null)
+    val repo = new MavenRepository(pom) {
+      override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+      }
+
+      override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenArtifact) => Some(Seq())
+      }
+    }
+
+    // compile scope
+    repo.construct(Scope.COMPILE)
+
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set())
+    assert(repo.packages.size === 2)
+  }
+
+  test("pattern to exclude all transitive dependencies of a group via *") {
+    val root = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>root</artifactId>
+          <version>1.2</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>B</artifactId>
+                  <version>1.0</version>
+                  <exclusions>
+                      <exclusion>
+                          <groupId>org.exclude</groupId>
+                          <artifactId>*</artifactId>
+                      </exclusion>
+                  </exclusions>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val b = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>B</artifactId>
+          <version>1.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.exclude</groupId>
+                  <artifactId>C</artifactId>
+                  <version>1.3</version>
+              </dependency>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val c = """
+      <project>
+          <groupId>org.exclude</groupId>
+          <artifactId>C</artifactId>
+          <version>1.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+          """
+
+    val d = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>D</artifactId>
+          <version>2.3</version>
+      </project>
+          """
+
+    val fetcher = (p: MavenPackage) => p match {
+      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
+      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
+      case MavenPackage(MavenArtifact("org.exclude", "C"), _) => Some(c)
+      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+      case _ => None
+    }
+
+    val pom = MavenPomParser(root, null)
+    val repo = new MavenRepository(pom) {
+      override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+      }
+
+      override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenArtifact) => Some(Seq())
+      }
+    }
+
+    // compile scope
+    repo.construct(Scope.COMPILE)
+
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+      Set(MavenPackage(MavenArtifact("org.test", "D"), "2.3"))
+    ))
+    assert(repo.packages.size === 3)
+  }
+
+
   test("should ignore optional and test dependencies") {
     val root = """
       <project>
