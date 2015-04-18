@@ -15,10 +15,7 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
   val packages = repository.packages
   val conflicts = repository.conflicts
 
-  // helper methods
-  def clauseSize = conflicts.size +
-    (packages :\ 0) {(p, acc) => repository(p).size + acc }
-
+  // the solver minimize objective function, so preferred package has a lower weight
   def weight(pkg: PackageT): Int = {
     val Version(major, minor, revision, qualifier, build) = Version(pkg.version)
     major * -100 - minor * 10 - revision
