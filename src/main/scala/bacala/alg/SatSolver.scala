@@ -3,36 +3,21 @@ package bacala.alg
 import bacala.core._
 import org.sat4j.core.{Vec, VecInt}
 import org.sat4j.pb._
+import org.sat4j.pb.tools.{DependencyHelper, WeightedObject}
 import java.math.BigInteger
+import scala.collection.JavaConversions._
 
 /** Implements a dependency resolution algorithm based on the SAT4j solver
   */
 class SatSolver[T <: Repository](val repository: T) extends Solver {
   type PackageT = repository.PackageT
   // data
-  // important for packages to be ordered for package2Int and int2Package to work
-  val packages = repository.packages.toList
+  val packages = repository.packages
   val conflicts = repository.conflicts
-  val package2Int = packages.zip(Stream from 1).toMap
-  val int2Package = (Stream from 1).zip(packages).toMap
 
   // helper methods
   def clauseSize = conflicts.size +
     (packages :\ 0) {(p, acc) => repository(p).size + acc }
-
-  def clauseForPackage(p: PackageT): Iterable[VecInt] = {
-    repository(p).map { set =>
-      if (repository.root == p)
-        new VecInt(set.map(package2Int(_)).toArray)
-      else
-        new VecInt(-package2Int(p) +: set.map(package2Int(_)).toArray)
-    }
-  }
-
-  def addConflict(conflict: Iterable[PackageT], solver: IPBSolver): Unit = {
-    val literals = new VecInt(conflict.map(package2Int(_)).toArray)
-    solver.addAtMost(literals, 1)
-  }
 
   def weight(pkg: PackageT): Int = {
     val Version(major, minor, revision, qualifier, build) = Version(pkg.version)
@@ -40,40 +25,34 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
     // 0x7FFFFFFF / (major * 10000 + minor * 100 + 10000*revision)
   }
 
-  val objectiveFunction: ObjectiveFunction = {
-    val literals = new VecInt(packages.map(package2Int(_)).toArray)
-    val coeffs = new Vec(packages.map(pkg => BigInteger.valueOf(weight(pkg))).toArray)
-    new ObjectiveFunction(literals, coeffs)
+  val objectiveFunction: Seq[WeightedObject[PackageT]] = {
+    packages.map(p => WeightedObject.newWO(p, weight(p))).toSeq
   }
 
   /** Returns a set of packages if there exists a solution
     */
-  override def solve: Option[Iterable[PackageT]] = {
+  override def solve: Either[Set[PackageT], Set[String]] = {
+    val solver: IPBSolver = SolverFactory.newEclipseP2()
+    val helper = new DependencyHelper[PackageT, String](solver);
 
-    val solver: IPBSolver = SolverFactory.newDefault()
+    helper.setObjectiveFunction(objectiveFunction:_*)
 
-    // number of vars
-    solver.newVar(packages.size)
-    solver.setExpectedNumberOfClauses(clauseSize)
-
-    for {
-      p <- packages
-      clause <- clauseForPackage(p)
-    } solver.addClause(clause)
-
-    conflicts.foreach { c => addConflict(c, solver) }
-
-    solver.setObjectiveFunction(objectiveFunction)
-
-    val res = solver.findModel()
-    if (res == null) None else
-      Some(res.filter(_ > 0).map(int2Package(_)).toSet)
-  }
-
-  def all(solver: IPBSolver, sols: Seq[Set[PackageT]] = Nil): Seq[Set[PackageT]] = {
-    if (!solver.isSatisfiable) sols else {
-      val model = solver.model().filter(_ > 0).map(int2Package(_)).toSet
-      all(solver, sols :+ model)
+    // root constraints
+    for ((dep, pkgs) <- repository(repository.root)) {
+      helper.clause("Root dependency must be true", pkgs.toSeq:_*)
     }
+
+    // dependencies
+    for (p <- packages; (dep, pkgs) <- repository(p)) {
+      helper.implication(p).implies(pkgs.toSeq:_*).named(s"$p depends on $dep")
+    }
+
+    // conflicts
+    for ( (artf, pkgs) <- conflicts ) {
+      helper.atMost(1, pkgs.toSeq:_*).named(s"Multiple versions of $artf are required")
+    }
+
+    if (helper.hasASolution) Left(helper.getASolution().toSet)
+    else Right(helper.why().toSet)
   }
 }

@@ -8,7 +8,7 @@ object MavenDependencyManager extends DependencyManager {
   type PackageT = MavenPackage
   var repo: MavenRepository = null
 
-  override def resolve: Option[Iterable[PackageT]] = {
+  override def resolve: Either[Iterable[PackageT], Set[String]] = {
     new SatSolver(repo).solve
   }
 
@@ -49,8 +49,8 @@ object MavenDependencyManager extends DependencyManager {
 
       println("\n\n######## resolution result #########")
       resolve match {
-        case Some(set) => println(set.mkString("\n"))
-        case None => println("No solution possible")
+        case Left(set) => println(set.mkString("\n"))
+        case Right(set) => println(set.mkString("\n"))
       }
     }
   }

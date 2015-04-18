@@ -32,7 +32,6 @@ abstract class Package {
   * Abstract representation of a dependency
   */
 abstract class Dependency {
-  type PackageT <: Package
-
   def artifact: Artifact // this dependency is on which artifact
+  def versionConstraint: String // version constraint
 }

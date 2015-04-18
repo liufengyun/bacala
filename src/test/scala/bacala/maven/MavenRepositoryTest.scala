@@ -91,10 +91,10 @@ class MavenRepositorySuite extends BasicSuite {
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
       Set(MavenPackage(MavenArtifact("org.test", "D"), "2.3"))
     ))
-    assert(repo.packages.size === 3)
+    assert(repo.packages.size === 2)
   }
 
   test("pattern to exclude all transitive dependencies via *") {
@@ -185,7 +185,7 @@ class MavenRepositorySuite extends BasicSuite {
     repo.construct(Scope.COMPILE)
 
     assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set())
-    assert(repo.packages.size === 2)
+    assert(repo.packages.size === 1)
   }
 
   test("pattern to exclude all transitive dependencies of a group via *") {
@@ -275,10 +275,10 @@ class MavenRepositorySuite extends BasicSuite {
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
       Set(MavenPackage(MavenArtifact("org.test", "D"), "2.3"))
     ))
-    assert(repo.packages.size === 3)
+    assert(repo.packages.size === 2)
   }
 
 
@@ -371,20 +371,20 @@ class MavenRepositorySuite extends BasicSuite {
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
       Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
     ))
-    assert(repo.packages.size === 3)
+    assert(repo.packages.size === 2)
 
     // test scope
     repo.reset
     repo.construct(Scope.TEST)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
       Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
     ))
-    assert(repo(MavenPackage(MavenArtifact("org.test", "C"), "1.3")).toSet == Set())
-    assert(repo.packages.size === 4)
+    assert(repo(MavenPackage(MavenArtifact("org.test", "C"), "1.3")).map(_._2).toSet == Set())
+    assert(repo.packages.size === 3)
   }
 
   test("should pick up excludes in different path") {
@@ -475,7 +475,7 @@ class MavenRepositorySuite extends BasicSuite {
     repo.construct(Scope.COMPILE)
 
     assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set())
-    assert(repo.packages.size === 4)
+    assert(repo.packages.size === 3)
   }
 
   test("should pick up excludes in different path 2") {
@@ -572,10 +572,10 @@ class MavenRepositorySuite extends BasicSuite {
 
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set(
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
       Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
     ))
-    assert(repo.packages.size === 4)
+    assert(repo.packages.size === 3)
   }
 
 }

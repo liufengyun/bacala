@@ -12,7 +12,7 @@ import Scope._
   */
 abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   type PackageT = MavenPackage
-  type DependenciesT = Set[Set[PackageT]]
+  type DependenciesT = Set[(MavenDependency, Set[PackageT])]
 
   // resolvers
   def makePomResolver(resolvers: Iterable[MavenResolver]): MavenPackage => Option[MavenPomFile]
@@ -64,7 +64,7 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
           }
 
           // update dependency set
-          dependencies += pkg -> (dependencies.getOrElse(pkg, Set()) + set)
+          dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> set)))
 
           // update conflict set
           artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
@@ -98,9 +98,9 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
   /** Returns all packages in the repository
     */
-  override def packages = dependencies.keys
+  override def packages = dependencies.keys.filter(_ != root)
 
   /** Returns all primitive conflicts in the repository
     */
-  override def conflicts = artifactsMap.values
+  override def conflicts = artifactsMap.toSeq
 }

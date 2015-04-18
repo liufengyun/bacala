@@ -17,7 +17,6 @@ case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
 case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, exclusions: Iterable[MavenArtifact], scope: Scope, optional: Boolean) extends Dependency {
-  type PackageT = MavenPackage
 
   def inScope(scp: Scope) = scp match {
     case TEST => scope == COMPILE || scope == TEST
@@ -32,7 +31,7 @@ case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, e
   }
 
   // packages compatible with this dependency
-  def resolve(versions: Iterable[String]): Iterable[PackageT] = {
+  def resolve(versions: Iterable[String]): Iterable[MavenPackage] = {
     val range = VersionRange(versionConstraint)
     val compatibleVersions = versions.filter(v => range.contains(Version(v))).toSet
 
