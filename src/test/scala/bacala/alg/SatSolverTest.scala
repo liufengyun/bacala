@@ -15,22 +15,27 @@ class SatSolverSuite extends BasicSuite {
       Pack(Art("root"), "2.4.2") -> Set(Set(Pack(Art("jackson-databind"), "2.3.4"))),
       Pack(Art("jackson-core"), "2.4.2") -> Set(),
       Pack(Art("jackson-core"), "2.4.3") -> Set(),
+      Pack(Art("jackson-core"), "2.4.4") -> Set(),
       Pack(Art("jackson-databind"), "2.3.4") -> Set(
         Set(
           Pack(Art("jackson-core"), "2.4.2"),
-          Pack(Art("jackson-core"), "2.4.3")
+          Pack(Art("jackson-core"), "2.4.3"),
+          Pack(Art("jackson-core"), "2.4.4")
         ),
         Set(
           Pack(Art("jackson-annotations"), "2.4.2"),
-          Pack(Art("jackson-annotations"), "2.4.3")
+          Pack(Art("jackson-annotations"), "2.4.3"),
+          Pack(Art("jackson-annotations"), "2.4.4")
         )
       ),
       Pack(Art("jackson-annotations"), "2.4.2") -> Set(
         Set(Pack(Art("jackson-core"), "2.4.2"))
       ),
       Pack(Art("jackson-annotations"), "2.4.3") -> Set(
-        Set(Pack(Art("jackson-core"), "2.4.3"))
-      )
+        Set(Pack(Art("jackson-core"), "2.4.3")),
+        Set(Pack(Art("jackson-core"), "2.4.4"))
+      ),
+      Pack(Art("jackson-annotations"), "2.4.4") -> Set()
     )
 
     override def root = Pack(Art("root"), "2.4.2")
@@ -40,16 +45,24 @@ class SatSolverSuite extends BasicSuite {
     override def packages = map.keys
 
     override def conflicts = Set(
-      Seq(Pack(Art("jackson-core"), "2.4.2"), Pack(Art("jackson-core"), "2.4.3")),
-      Seq(Pack(Art("jackson-annotations"), "2.4.2"), Pack(Art("jackson-annotations"), "2.4.3"))
+      Set(
+        Pack(Art("jackson-core"), "2.4.2"),
+        Pack(Art("jackson-core"), "2.4.3"),
+        Pack(Art("jackson-core"), "2.4.4")
+      ),
+      Set(
+        Pack(Art("jackson-annotations"), "2.4.2"),
+        Pack(Art("jackson-annotations"), "2.4.3"),
+        Pack(Art("jackson-annotations"), "2.4.4")
+      )
     )
   }
 
   test("should be able to solve constraints with the optimal solution") {
     assert(new SatSolver(TestRepository).solve === Some(Set(
-      Pack(Art("jackson-annotations"), "2.4.3"),
+      Pack(Art("jackson-annotations"), "2.4.4"),
       Pack(Art("jackson-databind"), "2.3.4"),
-      Pack(Art("jackson-core"), "2.4.3")
+      Pack(Art("jackson-core"), "2.4.4")
     )))
   }
 }

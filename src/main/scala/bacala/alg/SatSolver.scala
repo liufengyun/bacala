@@ -31,13 +31,13 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
 
   def addConflict(conflict: Iterable[PackageT], solver: IPBSolver): Unit = {
     val literals = new VecInt(conflict.map(package2Int(_)).toArray)
-    val coeffs = new VecInt(conflict.map(_ => 1).toArray)
-    solver.addAtMost(literals, coeffs, 1)
+    solver.addAtMost(literals, 1)
   }
 
   def weight(pkg: PackageT): Int = {
     val Version(major, minor, revision, qualifier, build) = Version(pkg.version)
     major * -100 - minor * 10 - revision
+    // 0x7FFFFFFF / (major * 10000 + minor * 100 + 10000*revision)
   }
 
   val objectiveFunction: ObjectiveFunction = {
@@ -68,5 +68,12 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
     val res = solver.findModel()
     if (res == null) None else
       Some(res.filter(_ > 0).map(int2Package(_)).toSet)
+  }
+
+  def all(solver: IPBSolver, sols: Seq[Set[PackageT]] = Nil): Seq[Set[PackageT]] = {
+    if (!solver.isSatisfiable) sols else {
+      val model = solver.model().filter(_ > 0).map(int2Package(_)).toSet
+      all(solver, sols :+ model)
+    }
   }
 }
