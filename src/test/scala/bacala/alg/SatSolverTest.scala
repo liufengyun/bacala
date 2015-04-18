@@ -3,53 +3,53 @@ package bacala.test.alg
 import bacala.test.BasicSuite
 import bacala.alg.SatSolver
 import bacala.core._
-import bacala.maven._
 
 class SatSolverSuite extends BasicSuite {
+  case class Art(val id: String) extends Artifact
+  case class Pack(val artifact: Art, val version: String) extends Package
+
   object TestRepository extends Repository {
-    type PackageT = MavenPackage
+    type PackageT = Pack
 
     val map = Map[PackageT, Set[Set[PackageT]]](
-      MavenPackage(MavenArtifact("root", "root"), "2.4.2") -> Set(Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4"))),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.2") -> Set(),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3") -> Set(),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4") -> Set(
+      Pack(Art("root"), "2.4.2") -> Set(Set(Pack(Art("jackson-databind"), "2.3.4"))),
+      Pack(Art("jackson-core"), "2.4.2") -> Set(),
+      Pack(Art("jackson-core"), "2.4.3") -> Set(),
+      Pack(Art("jackson-databind"), "2.3.4") -> Set(
         Set(
-          MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.2"),
-          MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3")
+          Pack(Art("jackson-core"), "2.4.2"),
+          Pack(Art("jackson-core"), "2.4.3")
         ),
         Set(
-          MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.2"),
-          MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.3")
+          Pack(Art("jackson-annotations"), "2.4.2"),
+          Pack(Art("jackson-annotations"), "2.4.3")
         )
       ),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.2") -> Set(
-        Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.2"))
+      Pack(Art("jackson-annotations"), "2.4.2") -> Set(
+        Set(Pack(Art("jackson-core"), "2.4.2"))
       ),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.3") -> Set(
-        Set(MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3"))
+      Pack(Art("jackson-annotations"), "2.4.3") -> Set(
+        Set(Pack(Art("jackson-core"), "2.4.3"))
       )
     )
 
-    override def root = MavenPackage(MavenArtifact("root", "root"), "2.4.2")
+    override def root = Pack(Art("root"), "2.4.2")
 
     override def apply(p: PackageT) = map(p)
 
     override def packages = map.keys
 
     override def conflicts = Set(
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.2") ->
-        MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3"),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.2") ->
-        MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.3")
+      Seq(Pack(Art("jackson-core"), "2.4.2"), Pack(Art("jackson-core"), "2.4.3")),
+      Seq(Pack(Art("jackson-annotations"), "2.4.2"), Pack(Art("jackson-annotations"), "2.4.3"))
     )
   }
 
-  test("should be able to solve simple constraints") {
-    assert(SatSolver.solve(TestRepository) === Some(Set(
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-annotations"), "2.4.3"),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-databind"), "2.3.4"),
-      MavenPackage(MavenArtifact("com.fasterxml.jackson.core", "jackson-core"), "2.4.3")
+  test("should be able to solve constraints with the optimal solution") {
+    assert(new SatSolver(TestRepository).solve === Some(Set(
+      Pack(Art("jackson-annotations"), "2.4.3"),
+      Pack(Art("jackson-databind"), "2.3.4"),
+      Pack(Art("jackson-core"), "2.4.3")
     )))
   }
 }

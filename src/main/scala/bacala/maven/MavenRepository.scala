@@ -19,7 +19,6 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   def makeMetaResolver(resolvers: Iterable[MavenResolver]): MavenArtifact => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
-  private val conflictSet = new TrieMap[(PackageT, PackageT), Unit]
   private val artifactsMap = new TrieMap[MavenArtifact, Set[PackageT]]
 
   // the root package
@@ -29,8 +28,6 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     */
   def construct(scope: Scope) = {
     resolve(initial, scope, Set(), Set())
-
-    createConflicts
 
     println("\n\n######## all packages in repository #########")
     println(dependencies.mkString("\n"))
@@ -42,7 +39,6 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     */
   def reset = {
     dependencies.clear
-    conflictSet.clear
     artifactsMap.clear
   }
 
@@ -96,26 +92,6 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     }
   }
 
-  /** Intialize conflicts structure from repository data
-    */
-  private def createConflicts = {
-    val pkgs = this.packages
-
-    val conflicts = for {
-      (_, pkgs) <- artifactsMap
-      p <- pkgs
-      q <- pkgs
-      if p != q
-      if !conflictSet.contains((p, q))
-      if !conflictSet.contains((q, p))
-    } conflictSet += (p, q) -> ()
-  }
-
-  // Packages with the same artefactId but different versions are in conflict
-  def inConflict(p: MavenPackage, q: MavenPackage): Boolean = {
-    p.artifact == q.artifact && p.version != q.version
-  }
-
   /** Returns the packages that p depends on directly
     */
   override def apply(p: PackageT) = dependencies(p)
@@ -126,5 +102,5 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  override def conflicts = conflictSet.keys
+  override def conflicts = artifactsMap.values
 }

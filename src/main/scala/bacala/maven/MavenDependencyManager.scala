@@ -9,7 +9,7 @@ object MavenDependencyManager extends DependencyManager {
   var repo: MavenRepository = null
 
   override def resolve: Option[Iterable[PackageT]] = {
-    SatSolver.solve(repo)
+    new SatSolver(repo).solve
   }
 
   def createRepo(spec: String) = {

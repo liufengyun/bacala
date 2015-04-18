@@ -1,6 +1,6 @@
 package bacala.maven
 
-import bacala.core.{Artifact, Dependency, Package}
+import bacala.core.{Artifact, Dependency, Package, Version}
 import bacala.maven.Scope._
 
 /** This file defines the structure of the PomFile

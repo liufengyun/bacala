@@ -21,5 +21,5 @@ abstract class Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  def conflicts: Iterable[ConflictT]
+  def conflicts: Iterable[Iterable[PackageT]]
 }

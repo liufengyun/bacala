@@ -3,6 +3,7 @@ package bacala.maven
 import scala.xml.XML
 import scala.xml.Node
 import bacala.util.Cache
+import bacala.core.Version
 
 /**
   * The object MetaFile is the interface to get all version definitions for
