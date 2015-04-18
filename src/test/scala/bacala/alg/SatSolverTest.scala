@@ -9,9 +9,15 @@ class SatSolverSuite extends BasicSuite {
   case class Pack(val artifact: Art, val version: String) extends Package
   case class Dep(val artifact: Art, val versionConstraint: String) extends Dependency
 
-  val A = Art("jackson-core")
-  val B = Art("jackson-annotations")
-  val C = Art("jackson-databind")
+  val A = Art("A")
+  val B = Art("B")
+  val C = Art("C")
+  val D = Art("D")
+  val E = Art("E")
+  val F = Art("F")
+  val G = Art("G")
+  val H = Art("H")
+  val I = Art("I")
 
   object TestRepository extends Repository {
     type PackageT = Pack
@@ -29,8 +35,7 @@ class SatSolverSuite extends BasicSuite {
         ),
         Dep(B, "[2.4.2, 2.4.4]") -> Set(
           Pack(B, "2.4.2"),
-          Pack(B, "2.4.3"),
-          Pack(B, "2.4.4")
+          Pack(B, "2.4.3")
         )
       ),
       Pack(B, "2.4.2") -> Set(
@@ -38,8 +43,7 @@ class SatSolverSuite extends BasicSuite {
       ),
       Pack(B, "2.4.3") -> Set(
         Dep(A, "(2.4.2, 2.4.4)") -> Set(Pack(A, "2.4.3"), Pack(A, "2.4.4"))
-      ),
-      Pack(B, "2.4.4") -> Set()
+      )
     )
 
     override def root = Pack(Art("root"), "2.4.2")
@@ -50,23 +54,22 @@ class SatSolverSuite extends BasicSuite {
 
     override def conflicts = Set(
       A -> Set(
-        Pack(Art("jackson-core"), "2.4.2"),
-        Pack(Art("jackson-core"), "2.4.3"),
-        Pack(Art("jackson-core"), "2.4.4")
+        Pack(A, "2.4.2"),
+        Pack(A, "2.4.3"),
+        Pack(A, "2.4.4")
       ),
       B -> Set(
-        Pack(Art("jackson-annotations"), "2.4.2"),
-        Pack(Art("jackson-annotations"), "2.4.3"),
-        Pack(Art("jackson-annotations"), "2.4.4")
+        Pack(B, "2.4.2"),
+        Pack(B, "2.4.3")
       )
     )
   }
 
   test("should be able to solve constraints with the optimal solution") {
     assert(new SatSolver(TestRepository).solve === Left(Set(
-      Pack(Art("jackson-annotations"), "2.4.4"),
-      Pack(Art("jackson-databind"), "2.3.4"),
-      Pack(Art("jackson-core"), "2.4.4")
+      Pack(B, "2.4.3"),
+      Pack(C, "2.3.4"),
+      Pack(A, "2.4.4")
     )))
   }
 }
