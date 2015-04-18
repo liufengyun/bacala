@@ -28,28 +28,28 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
 
   /** Returns a set of packages if there exists a solution
     */
-  override def solve: Either[Set[PackageT], Set[String]] = {
+  override def solve: Either[Set[PackageT], Seq[Clause]] = {
     val solver: IPBSolver = SolverFactory.newEclipseP2()
-    val helper = new DependencyHelper[PackageT, String](solver);
+    val helper = new DependencyHelper[PackageT, Clause](solver);
 
     helper.setObjectiveFunction(objectiveFunction:_*)
 
     // root constraints
     for ((dep, pkgs) <- repository(repository.root)) {
-      helper.clause("Root dependency must be true", pkgs.toSeq:_*)
+      helper.clause(DependencyClause(repository.root, dep), pkgs.toSeq:_*)
     }
 
     // dependencies
     for (p <- packages; (dep, pkgs) <- repository(p)) {
-      helper.implication(p).implies(pkgs.toSeq:_*).named(s"$p depends on $dep")
+      helper.implication(p).implies(pkgs.toSeq:_*).named(DependencyClause(p, dep))
     }
 
     // conflicts
     for ( (artf, pkgs) <- conflicts ) {
-      helper.atMost(1, pkgs.toSeq:_*).named(s"Multiple versions of $artf are required")
+      helper.atMost(1, pkgs.toSeq:_*).named(ConflictClause(artf, pkgs))
     }
 
     if (helper.hasASolution) Left(helper.getASolution().toSet)
-    else Right(helper.why().toSet)
+    else Right(helper.why().toList)
   }
 }

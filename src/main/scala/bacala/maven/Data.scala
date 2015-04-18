@@ -42,6 +42,10 @@ case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, e
 
     validVersions.map(v => MavenPackage(artifact, v))
   }
+
+  override def toString = {
+    artifact.toString + "(" + versionConstraint + ")"
+  }
 }
 
 case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {

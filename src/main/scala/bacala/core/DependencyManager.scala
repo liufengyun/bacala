@@ -4,5 +4,5 @@ abstract class DependencyManager {
   type PackageT <: Package
 
   // call the algorithm to resolve dependency
-  def resolve: Either[Iterable[PackageT], Set[String]]
+  def resolve: Either[Iterable[PackageT], Seq[Clause]]
 }
