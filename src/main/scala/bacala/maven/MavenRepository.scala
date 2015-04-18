@@ -53,7 +53,7 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
     val pomResolver = makePomResolver(resolvers)
 
     deps.foreach { dep =>
-      metaResolver(dep.artifact).map(dep.resolve(_)) match {
+      metaResolver(dep.artifact).map(vers => dep.resolve(vers).filter(p => pomResolver(p).nonEmpty)) match {
         case Some(pkgs) =>
           val set = pkgs.toSet
 
@@ -87,6 +87,8 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
             System.exit(1)
           } else {
             println(s"Warning: Failed to resolve dependency $dep in $pkg")
+            // update dependency set
+            dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> Set())))
           }
       }
     }

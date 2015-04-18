@@ -4,6 +4,89 @@ import bacala.test._
 import bacala.maven._
 
 class MavenRepositorySuite extends BasicSuite {
+  test("missing dependency should corresponds to an empty set") {
+    val root = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>root</artifactId>
+          <version>1.2</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>B</artifactId>
+                  <version>1.0</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val b = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>B</artifactId>
+          <version>1.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>C</artifactId>
+                  <version>1.3</version>
+              </dependency>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """
+
+    val c = """
+      <project>
+          <groupId>org.test</groupId>
+          <artifactId>C</artifactId>
+          <version>1.3</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.test</groupId>
+                  <artifactId>D</artifactId>
+                  <version>2.3</version>
+              </dependency>
+          </dependencies>
+      </project>
+          """
+
+    val fetcher = (p: MavenPackage) => p match {
+      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
+      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
+      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
+      case _ => None
+    }
+
+    val pom = MavenPomParser(root, null)
+    val repo = new MavenRepository(pom) {
+      override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+      }
+
+      override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
+        (pkg: MavenArtifact) => pkg match {
+          case MavenArtifact(_, "B") => Some(Seq("1.0"))
+          case MavenArtifact(_, "C") => Some(Seq("1.3"))
+          case _ => None
+        }
+      }
+    }
+
+    // compile scope
+    repo.construct(Scope.COMPILE)
+
+    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3")),
+      Set()
+    ))
+    assert(repo.packages.size === 2)
+  }
+
   test("should observe excludes in dependency") {
     val root = """
       <project>
