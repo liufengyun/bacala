@@ -4,11 +4,13 @@ import bacala.core._
 import bacala.util.Worker
 import bacala.alg.SatSolver
 
-object MavenDependencyManager extends DependencyManager {
+object MavenDependencyManager {
   type PackageT = MavenPackage
+  type TreeT = Tree[PackageT, DependencyEdge[PackageT, MavenDependency]]
+
   var repo: MavenRepository = null
 
-  override def resolve: Either[Iterable[PackageT], Seq[Clause]] = {
+  def resolve: Either[Iterable[PackageT], TreeT] = {
     new SatSolver(repo).solve
   }
 
@@ -37,6 +39,26 @@ object MavenDependencyManager extends DependencyManager {
     )
   }
 
+  def printError(tree: TreeT, level: Int = 0): Unit = {
+    def tip = "  " * level + "~>"
+    tree match {
+      case Node(pkg, children) =>
+        children.foreach { case (edge, child) =>
+          edge match {
+            case InfectedEdge(dep, to) =>
+              println(tip +  pkg + " dependency " + dep + " resolved to:" + to)
+              printError(child, level+1) // depth-first
+            case ConflictEdge(dep, conflicts) =>
+              println(tip +  pkg + " dependency " + dep + " leads to conflict set:")
+              conflicts.foreach { pkg => println("  " * (level + 1) + pkg)}
+            case MissingEdge(dep) =>
+              println(tip +  pkg + " dependency " + dep + " can't be resolved")
+          }
+        }
+      case Leaf =>
+    }
+  }
+
   def main(args: Array[String]) = {
     if (args.length != 1) {
       printUsage
@@ -50,7 +72,7 @@ object MavenDependencyManager extends DependencyManager {
       println("\n\n######## resolution result #########")
       resolve match {
         case Left(set) => println(set.mkString("\n"))
-        case Right(seq) => println(seq.mkString("\n"))
+        case Right(tree) => printError(tree)
       }
     }
   }

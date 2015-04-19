@@ -5,6 +5,7 @@ package bacala.core
   */
 abstract class Repository {
   type PackageT <: Package
+  type DependencyT <: Dependency
 
   /** Returns the root package for the repository
     */
@@ -12,7 +13,7 @@ abstract class Repository {
 
   /** Returns the packages that p depends on directly
     */
-  def apply(p: PackageT): Iterable[(Dependency, Iterable[PackageT])]
+  def apply(p: PackageT): Iterable[(DependencyT, Iterable[PackageT])]
 
   /** Returns all packages in the repository, except the root
     */
@@ -20,5 +21,5 @@ abstract class Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  def conflicts: Iterable[(Artifact, Iterable[PackageT])]
+  def conflicts: Iterable[(Artifact, Set[PackageT])]
 }

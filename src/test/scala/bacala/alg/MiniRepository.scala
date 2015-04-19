@@ -21,6 +21,7 @@ object K extends Art("K")
 
 abstract class MiniRepository extends Repository {
   type PackageT = Pack
+  type DependencyT = Dep
 
   def map: Map[PackageT, Set[(Dep, Set[PackageT])]]
 
@@ -30,5 +31,5 @@ abstract class MiniRepository extends Repository {
 
   override def packages = map.keys.filter(_ != root)
 
-  override def conflicts: Set[(Art, Iterable[Pack])]
+  override def conflicts: Set[(Art, Set[Pack])]
 }

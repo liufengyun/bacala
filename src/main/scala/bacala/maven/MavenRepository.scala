@@ -12,6 +12,7 @@ import Scope._
   */
 abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   type PackageT = MavenPackage
+  type DependencyT = MavenDependency
   type DependenciesT = Set[(MavenDependency, Set[PackageT])]
 
   // resolvers

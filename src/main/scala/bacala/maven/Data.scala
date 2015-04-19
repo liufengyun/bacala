@@ -17,7 +17,6 @@ case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
 case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, exclusions: Iterable[MavenArtifact], scope: Scope, optional: Boolean) extends Dependency {
-
   def inScope(scp: Scope) = scp match {
     case TEST => scope == COMPILE || scope == TEST
     case _ => scope == scp
