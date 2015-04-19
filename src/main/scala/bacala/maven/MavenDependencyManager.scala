@@ -40,7 +40,7 @@ object MavenDependencyManager {
   }
 
   def printError(tree: TreeT, level: Int = 0): Unit = {
-    def tip = "  " * level + "~>"
+    def tip = "  " * level + (if (level == 0) "" else "~>")
     tree match {
       case Node(pkg, children) =>
         children.foreach { case (edge, child) =>
@@ -50,7 +50,7 @@ object MavenDependencyManager {
               printError(child, level+1) // depth-first
             case ConflictEdge(dep, conflicts) =>
               println(tip +  pkg + " dependency " + dep + " leads to conflict set:")
-              conflicts.foreach { pkg => println("  " * (level + 1) + pkg)}
+              conflicts.foreach { pkg => println("  " * (level + 1) + "*" +  pkg)}
             case MissingEdge(dep) =>
               println(tip +  pkg + " dependency " + dep + " can't be resolved")
           }
