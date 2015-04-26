@@ -38,7 +38,7 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
   /** Returns a set of packages if there exists a solution
     */
   override def solve: Either[Set[PackageT], TreeT] = {
-    val solver: IPBSolver = SolverFactory.newEclipseP2()
+    val solver: IPBSolver = SolverFactory.newDefault()
     val helper = new DependencyHelper[PackageT, Clause](solver);
 
     helper.setObjectiveFunction(objectiveFunction:_*)
