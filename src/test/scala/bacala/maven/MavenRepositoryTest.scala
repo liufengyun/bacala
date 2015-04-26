@@ -460,7 +460,6 @@ class MavenRepositorySuite extends BasicSuite {
     assert(repo.packages.size === 2)
 
     // test scope
-    repo.reset
     repo.construct(Scope.TEST)
 
     assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(

@@ -6,6 +6,7 @@ import scala.collection.concurrent.TrieMap
 
 import bacala.core._
 import bacala.util.Worker
+import bacala.util.ConsoleHelper.ColorText
 import Scope._
 
 /** Constructs the repository from initial constraints
@@ -28,19 +29,9 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
   /** Builds the repository from initial constraints
     */
   def construct(scope: Scope) = {
-    resolve(initial, scope, Set(), Set())
-
-    println("\n\n######## all packages in repository #########")
-    println(dependencies.mkString("\n"))
-    println("\n\n######## all conflicts in repository #########")
-    println(artifactsMap.mkString("\n"))
-  }
-
-  /** Resets the repository to empty
-    */
-  def reset = {
     dependencies.clear
     artifactsMap.clear
+    resolve(initial, scope, Set(), Set())
   }
 
   /** recursively builds the dependency closure
@@ -60,7 +51,7 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
           // set can't be empty for root
           if (set.isEmpty && pkg == root) {
-            println("Fatal Error: can't find match version for root dependency " + dep)
+            println(s"Fatal Error: can't find match version for root dependency $dep".red)
             System.exit(1)
           }
 
@@ -79,15 +70,15 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
               case Some(pom) =>
                 resolve(pom, COMPILE, dep.exclusions ++ excludes, path + pkg)
               case None =>
-                println(s"Error: failed to download POM file for $p")
+                println(s"Error: failed to download POM file for $p".red)
             }
           }
         case None =>
           if (pkg == root) {
-            println("Fatal Error: Can't resolve root dependency " + dep)
+            println(s"Fatal Error: Can't resolve root dependency $dep".red)
             System.exit(1)
           } else {
-            println(s"Warning: Failed to resolve dependency $dep in $pkg")
+            println(s"Warning: Failed to resolve dependency $dep in $pkg".yellow)
             // update dependency set
             dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> Set())))
           }

@@ -4,6 +4,7 @@ package bacala.maven
 import scala.xml.XML
 import scala.xml.Node
 import bacala.util.Cache
+import bacala.util.ConsoleHelper.ColorText
 import Scope._
 
 /**
@@ -149,7 +150,7 @@ class PomFile(val node: Node) {
       Property.resolve(node, prop) match {
         case Some(v) => v
         case None =>
-          println("Warning: can't resolve version specification $prop for $artifact in the parent POM of $currentPackage")
+          println("Warning: can't resolve version specification $prop for $artifact in the parent POM of $currentPackage".yellow)
           defaultVersion(artifact)
       }
     case VersionRange(range) => ver
@@ -157,7 +158,7 @@ class PomFile(val node: Node) {
       parent.managedVersionFor(artifact) match {  // version specified in parent POM file
         case Some(ver) => ver
         case None =>
-          println("Warning: can't find version specification in parent for " + artifact + " in the parent POM of " + currentPackage)
+          println(("Warning: can't find version specification in parent for " + artifact + " in the parent POM of " + currentPackage).yellow)
           defaultVersion(artifact)
       }
     case ver =>
@@ -172,7 +173,7 @@ class PomFile(val node: Node) {
       Property.resolve(node, prop) match {
         case Some(v) => v
         case None =>
-          println(s"Error: failed to resolve groupId property $gid in $currentPackage - using $groupId")
+          println(s"Error: failed to resolve groupId property $gid in $currentPackage - using $groupId".red)
           currentPackage.groupId // using groupId of current POM
       }
     case _ => gid
@@ -221,7 +222,7 @@ class PomFile(val node: Node) {
     } match {
       case Some(pom) => pom
       case None =>
-        println("Error: failed to load parent POM for " + currentPackage)
+        println(("Error: failed to load parent POM for " + currentPackage).red)
         null
     }
   }
@@ -241,7 +242,7 @@ class PomFile(val node: Node) {
       } match {
         case Some(pom) => pom
         case None =>
-          println("Error: failed to load module " + artifactId + " for " + currentPackage)
+          println(("Error: failed to load module " + artifactId + " for " + currentPackage).red)
           null
       }
     }).filter(_ != null)
@@ -251,7 +252,7 @@ class PomFile(val node: Node) {
     */
   def defaultVersion(artifact: MavenArtifact) = {
     val ver = if (artifact.groupId == groupId) version else "(0.0.0,)"
-    println("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using " + ver)
+    println(("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using " + ver).yellow)
     ver
   }
 

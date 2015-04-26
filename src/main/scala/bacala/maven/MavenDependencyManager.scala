@@ -1,8 +1,9 @@
 package bacala.maven
 
 import bacala.core._
-import bacala.util.{Worker, DependencyTree}
+import bacala.util.{Worker, DependencyTree, Measure}
 import bacala.alg.SatSolver
+import bacala.util.ConsoleHelper.ColorText
 
 object MavenDependencyManager {
   type PackageT = MavenPackage
@@ -33,9 +34,9 @@ object MavenDependencyManager {
 
   def printUsage = {
     println(
-      """*****************************\n""" +
+      """=============================\n""" +
       """Usage: sbt "run filename.xml"\n""" +
-      """*****************************\n"""
+      """=============================\n"""
     )
   }
 
@@ -46,14 +47,14 @@ object MavenDependencyManager {
         children.foreach { case (edge, child) =>
           edge match {
             case InfectedEdge(dep, to) =>
-              println(tip +  pkg + " dependency " + dep + " resolved to:" + to)
+              println(tip +  pkg.bold + " dependency " + dep + " resolved to:" + to)
               printTree(child, level+1) // depth-first
             case ConflictEdge(dep, conflicts) =>
-              println(tip +  pkg + " dependency " + dep + " leads to conflict")
+              println((tip +  pkg + " dependency " + dep + " leads to conflict").red)
             case MissingEdge(dep) =>
-              println(tip +  pkg + " dependency " + dep + " can't be resolved")
+              println((tip +  pkg + " dependency " + dep + " can't be resolved").red)
             case HealthyEdge(dep, to) =>
-              println(tip +  pkg + " dependency " + dep + " resolved to:" + to)
+              println(tip +  pkg.bold + " dependency " + dep + " resolved to:" + to)
               printTree(child, level+1) // depth-first
           }
         }
@@ -69,13 +70,17 @@ object MavenDependencyManager {
       val content = source.mkString
       source.close()
 
-      createRepo(content)
+      val measure = new Measure()
 
-      println("\n\n######## resolution result #########")
-      resolve match {
+      measure.time("Network IO") { createRepo(content) }
+
+      println("\n\n================  Resolution Result   ==================".bold)
+      measure.time("Resolution") { resolve } match {
         case Left(set) => printTree(repo.buildTree(set))
         case Right(tree) => printTree(tree)
       }
+
+      println(measure)
     }
   }
 }
