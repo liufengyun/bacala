@@ -2,7 +2,7 @@ package bacala.util
 
 import bacala.core._
 
-/** Constructs a dependency tree from solution set and pretty print the tree
+/** Constructs a dependency tree from solution set
   */
 trait DependencyTree { this: Repository =>
   type TreeT = Tree[PackageT, DependencyEdge[PackageT, DependencyT]]

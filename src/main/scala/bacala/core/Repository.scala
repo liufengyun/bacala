@@ -3,9 +3,10 @@ package bacala.core
 /**
   * Abstract representation of the dependency closure of a group of packages
   */
-abstract class Repository {
-  type PackageT <: Package
-  type DependencyT <: Dependency
+abstract class Repository { outer =>
+  type ArtifactT   <: Artifact
+  type PackageT    <: Package { type ArtifactT = outer.ArtifactT }
+  type DependencyT <: Dependency { type ArtifactT = outer.ArtifactT }
 
   /** Returns the root package for the repository
     */
@@ -21,5 +22,5 @@ abstract class Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  def conflicts: Iterable[(Artifact, Set[PackageT])]
+  def conflicts: Map[ArtifactT, Set[PackageT]]
 }

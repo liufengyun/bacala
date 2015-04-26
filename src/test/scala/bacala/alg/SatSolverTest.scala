@@ -30,7 +30,7 @@ class SatSolverSuite extends BasicSuite {
       )
     )
 
-    override def conflicts = Set(
+    override def conflicts = Map(
       A -> Set(
         Pack(A, "2.4.2"),
         Pack(A, "2.4.3"),
@@ -39,7 +39,8 @@ class SatSolverSuite extends BasicSuite {
       B -> Set(
         Pack(B, "2.4.2"),
         Pack(B, "2.4.3")
-      )
+      ),
+      C -> Set(Pack(C, "2.3.4"))
     )
   }
 
@@ -67,7 +68,7 @@ class SatSolverSuite extends BasicSuite {
       Pack(C, "2.1.4") -> Set()
     )
 
-    override def conflicts = Set(
+    override def conflicts = Map(
       A -> Set(Pack(A, "1.3.5")),
       B -> Set(Pack(B, "2.3.4")),
       C -> Set(Pack(C, "2.1.1"), Pack(C, "2.1.4"))
@@ -102,7 +103,7 @@ class SatSolverSuite extends BasicSuite {
       Pack(C, "2.1.4") -> Set()
     )
 
-    override def conflicts = Set(
+    override def conflicts = Map(
       A -> Set(Pack(A, "1.3.5")),
       B -> Set(Pack(B, "2.3.4")),
       C -> Set(Pack(C, "2.1.1"), Pack(C, "2.1.4"))

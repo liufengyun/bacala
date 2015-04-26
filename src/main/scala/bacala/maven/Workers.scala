@@ -8,7 +8,7 @@ import bacala.util._
 object Workers {
   object MetaFileResolverCache extends CachedWorker[MavenArtifact, Iterable[String]] with MemoryBase[MavenArtifact, Iterable[String]]
 
-  object PomFileResolverCache extends CachedWorker[MavenPackage, MavenPomFile] with MemoryBase[MavenPackage, MavenPomFile]
+  object PomFileResolverCache extends CachedWorker[MavenPackage, MavenPomData] with MemoryBase[MavenPackage, MavenPomData]
 
   val mavenMainBase = "http://repo1.maven.org/maven2"
 
@@ -67,7 +67,7 @@ object Workers {
     * Problem: now for the POM parser, it can only use a single fetcher, unable to chain them
     * but the parent or modules of a POM file may be found at different repos.
     */
-  def createPomResolver(fetcher: Worker[MavenPackage, String]) = new Worker[MavenPackage, MavenPomFile] {
+  def createPomResolver(fetcher: Worker[MavenPackage, String]) = new Worker[MavenPackage, MavenPomData] {
     override def apply(pkg: MavenPackage) = {
       fetcher(pkg).map(spec => MavenPomParser(spec, chainPomFetchers(fetcher)))
     }

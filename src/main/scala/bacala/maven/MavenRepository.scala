@@ -11,17 +11,18 @@ import Scope._
 
 /** Constructs the repository from initial constraints
   */
-abstract class MavenRepository(initial: MavenPomFile) extends Repository {
+abstract class MavenRepository(initial: MavenPomData) extends Repository {
+  type ArtifactT = MavenArtifact
   type PackageT = MavenPackage
   type DependencyT = MavenDependency
-  type DependenciesT = Set[(MavenDependency, Set[PackageT])]
+  type DependenciesT = Set[(DependencyT, Set[PackageT])]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MavenResolver]): MavenPackage => Option[MavenPomFile]
+  def makePomResolver(resolvers: Iterable[MavenResolver]): MavenPackage => Option[MavenPomData]
   def makeMetaResolver(resolvers: Iterable[MavenResolver]): MavenArtifact => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
-  private val artifactsMap = new TrieMap[MavenArtifact, Set[PackageT]]
+  private val artifactsMap = new TrieMap[ArtifactT, Set[PackageT]]
 
   // the root package
   def root = initial.pkg
@@ -36,8 +37,8 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
   /** recursively builds the dependency closure
     */
-  def resolve(pom: MavenPomFile, scope: Scope, excludes: Iterable[MavenArtifact], path: Set[MavenPackage]): Unit = {
-    val MavenPomFile(pkg, depsAll, resolvers) = pom
+  def resolve(pom: MavenPomData, scope: Scope, excludes: Iterable[ArtifactT], path: Set[PackageT]): Unit = {
+    val MavenPomData(pkg, depsAll, resolvers) = pom
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
     // the resolvers will be added to the default resolver
@@ -96,5 +97,5 @@ abstract class MavenRepository(initial: MavenPomFile) extends Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  override def conflicts = artifactsMap.toSeq
+  override def conflicts = artifactsMap.toMap
 }

@@ -115,7 +115,7 @@ class PomFile(val node: Node) {
 
   /** Parses the POM file and return the dependency constraints
     */
-  def parse(aggregator: PomFile = null)(implicit fetcher: Fetcher): MavenPomFile = {
+  def parse(aggregator: PomFile = null)(implicit fetcher: Fetcher): MavenPomData = {
     if (hasParent) parent = loadParent(fetcher)
     if (hasModules) modules = loadModules(fetcher)
 
@@ -127,7 +127,7 @@ class PomFile(val node: Node) {
     if (modules != null)
       constraints = (modules :\ constraints) { (m, acc) => m.parse(this).deps ++: acc }
 
-    MavenPomFile(currentPackage, constraints, repositories)
+    MavenPomData(currentPackage, constraints, repositories)
   }
 
   // get all parents in the chain
@@ -309,7 +309,7 @@ object MavenPomParser {
     *
     * Parser requires a fetcher to get POM files for parent and modules
     */
-  def apply(spec: String, maker: FetcherMaker): MavenPomFile = {
+  def apply(spec: String, maker: FetcherMaker): MavenPomData = {
     val pom = PomFile(spec)
 
     implicit val fetcher = if (maker != null) maker(pom.repositories) else null

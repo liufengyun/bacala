@@ -6,12 +6,7 @@ import bacala.alg.SatSolver
 import bacala.util.ConsoleHelper.ColorText
 
 object MavenDependencyManager {
-  type PackageT = MavenPackage
-  type TreeT = Tree[PackageT, DependencyEdge[PackageT, MavenDependency]]
-
-  def resolve(repo: MavenRepository): Either[Set[PackageT], TreeT] = {
-    new SatSolver(repo).solve
-  }
+  type TreeT = Tree[MavenPackage, DependencyEdge[MavenPackage, MavenDependency]]
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))
@@ -67,9 +62,10 @@ object MavenDependencyManager {
 
     val measure = new Measure()
     val repo = measure.time("Network IO") { createRepo(content) }
+    val solver = new SatSolver(repo)
 
     println("\n\n================  Resolution Result   ==================".bold)
-    measure.time("Resolution") { resolve(repo) } match {
+    measure.time("Resolution") { solver.solve } match {
       case Left(set) => printTree(repo.buildTree(set))
       case Right(tree) => printTree(tree)
     }

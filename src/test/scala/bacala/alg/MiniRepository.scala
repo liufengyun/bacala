@@ -3,8 +3,12 @@ package bacala.test.alg
 import bacala.core._
 
 case class Art(val id: String) extends Artifact
-case class Pack(val artifact: Art, val version: String) extends Package
-case class Dep(val artifact: Art, val versionConstraint: String) extends Dependency
+case class Pack(val artifact: Art, val version: String) extends Package {
+  type ArtifactT = Art
+}
+case class Dep(val artifact: Art, val versionConstraint: String) extends Dependency {
+  type ArtifactT = Art
+}
 
 object Root extends Art("Root")
 object A extends Art("A")
@@ -20,6 +24,7 @@ object J extends Art("J")
 object K extends Art("K")
 
 abstract class MiniRepository extends Repository {
+  type ArtifactT = Art
   type PackageT = Pack
   type DependencyT = Dep
 
@@ -30,6 +35,4 @@ abstract class MiniRepository extends Repository {
   override def apply(p: PackageT) = map(p)
 
   override def packages = map.keys.filter(_ != root)
-
-  override def conflicts: Set[(Art, Set[Pack])]
 }

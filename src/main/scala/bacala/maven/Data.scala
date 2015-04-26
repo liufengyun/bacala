@@ -17,6 +17,8 @@ case class MavenArtifact(groupId: String, artifactId: String) extends Artifact {
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
 case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, exclusions: Iterable[MavenArtifact], scope: Scope, optional: Boolean) extends Dependency {
+  type ArtifactT = MavenArtifact
+
   def inScope(scp: Scope) = scp match {
     case TEST => scope == COMPILE || scope == TEST
     case _ => scope == scp
@@ -48,10 +50,12 @@ case class MavenDependency(artifact: MavenArtifact, versionConstraint: String, e
 }
 
 case class MavenPackage(artifact: MavenArtifact, version:String) extends Package {
+  type ArtifactT = MavenArtifact
+
   def artifactId = artifact.artifactId
   def groupId = artifact.groupId
 }
 
 case class MavenResolver(id: String, name: String, url: String)
 
-case class MavenPomFile(pkg: MavenPackage, deps: Iterable[MavenDependency], resolvers: Iterable[MavenResolver])
+case class MavenPomData(pkg: MavenPackage, deps: Iterable[MavenDependency], resolvers: Iterable[MavenResolver])

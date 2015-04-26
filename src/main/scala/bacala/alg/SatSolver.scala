@@ -1,38 +1,48 @@
 package bacala.alg
 
 import bacala.core._
+import bacala.util.MemoryCache
+
 import org.sat4j.core.{Vec, VecInt}
 import org.sat4j.pb._
 import org.sat4j.pb.tools.{DependencyHelper, WeightedObject}
+
 import java.math.BigInteger
+
 import scala.collection.JavaConversions._
 
 /** Implements a dependency resolution algorithm based on the SAT4j solver
   */
 class SatSolver[T <: Repository](val repository: T) extends Solver {
+  type PackageT = repository.PackageT
+  type DependencyT = repository.DependencyT
+  type ArtifactT = repository.ArtifactT
 
   abstract class Clause extends Ordered[Clause] {
     def compare(that: Clause) = if (this == that) 0 else this.hashCode() - that.hashCode()
   }
 
   case class DependencyClause(pkg: PackageT, dep: DependencyT) extends Clause
-  case class ConflictClause(artifact: Artifact, pkgs: Set[PackageT]) extends Clause
+  case class ConflictClause(artifact: ArtifactT, pkgs: Set[PackageT]) extends Clause
 
-  type PackageT = repository.PackageT
-  type DependencyT = repository.DependencyT
-  // data
-  val packages = repository.packages
-  val conflicts = repository.conflicts
+  private val allPackages = repository.packages
+  private val allConflicts = repository.conflicts
+  // cache the ranking of versions, highest version has lower rank
+  private val rankingCache = new MemoryCache[ArtifactT, Map[PackageT, Int]] {}
 
-  // the solver minimize objective function, so preferred package has a lower weight
+  // the solver minimizes the objective function, so preferred package has a lower weight
   def weight(pkg: PackageT): Int = {
-    val Version(major, minor, revision, qualifier, build) = Version(pkg.version)
-    major * -100 - minor * 10 - revision
-    // 0x7FFFFFFF / (major * 10000 + minor * 100 + 10000*revision)
+    def rank(artf: ArtifactT) = {
+      allConflicts(artf).toSeq.sortWith { (a, b) =>
+        Version(a.version) > Version(b.version)
+      }.zip(Stream.from(10)).toMap
+    }
+
+    rankingCache.fetch(pkg.artifact, rank(pkg.artifact))(pkg)
   }
 
   val objectiveFunction: Seq[WeightedObject[PackageT]] = {
-    packages.map(p => WeightedObject.newWO(p, weight(p))).toSeq
+    allPackages.map(p => WeightedObject.newWO(p, weight(p))).toSeq
   }
 
   /** Returns a set of packages if there exists a solution
@@ -49,12 +59,12 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
     }
 
     // dependencies
-    for (p <- packages; (dep, pkgs) <- repository(p)) {
+    for (p <- allPackages; (dep, pkgs) <- repository(p)) {
       helper.implication(p).implies(pkgs.toSeq:_*).named(DependencyClause(p, dep))
     }
 
     // conflicts
-    for ( (artf, pkgs) <- conflicts ) {
+    for ( (artf, pkgs) <- allConflicts ) {
       helper.atMost(1, pkgs.toSeq:_*).named(ConflictClause(artf, pkgs))
     }
 

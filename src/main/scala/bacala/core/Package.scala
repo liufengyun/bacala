@@ -1,7 +1,6 @@
 package bacala.core
 
-/**
-  * abstract representation of a library
+/** Abstract representation of a library
   */
 
 abstract class Artifact {
@@ -18,20 +17,20 @@ abstract class Artifact {
   }
 }
 
-/**
-  * abstract representation of a package
+/** Abstract representation of a package
   */
 abstract class Package {
-  def artifact: Artifact
+  type ArtifactT <: Artifact
+  def artifact: ArtifactT
   def version: String // version number
 
   override def toString = artifact + "-" + version
 }
 
-/**
-  * Abstract representation of a dependency
+/** Abstract representation of a dependency
   */
 abstract class Dependency {
-  def artifact: Artifact // this dependency is on which artifact
+  type ArtifactT <: Artifact
+  def artifact: ArtifactT // this dependency is on which artifact
   def versionConstraint: String // version constraint
 }
