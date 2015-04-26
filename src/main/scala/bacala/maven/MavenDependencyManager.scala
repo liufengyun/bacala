@@ -49,8 +49,7 @@ object MavenDependencyManager {
               println(tip +  pkg + " dependency " + dep + " resolved to:" + to)
               printError(child, level+1) // depth-first
             case ConflictEdge(dep, conflicts) =>
-              println(tip +  pkg + " dependency " + dep + " leads to conflict set:")
-              conflicts.foreach { pkg => println("  " * (level + 1) + "*" +  pkg)}
+              println(tip +  pkg + " dependency " + dep + " leads to conflict")
             case MissingEdge(dep) =>
               println(tip +  pkg + " dependency " + dep + " can't be resolved")
           }
