@@ -9,15 +9,13 @@ object MavenDependencyManager {
   type PackageT = MavenPackage
   type TreeT = Tree[PackageT, DependencyEdge[PackageT, MavenDependency]]
 
-  var repo: MavenRepository with DependencyTree = null
-
-  def resolve: Either[Set[PackageT], TreeT] = {
+  def resolve(repo: MavenRepository): Either[Set[PackageT], TreeT] = {
     new SatSolver(repo).solve
   }
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))
-    repo = new MavenRepository(pom) with DependencyTree {
+    val repo = new MavenRepository(pom) with DependencyTree {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
         val fetcher = Workers.chainPomFetchers(Workers.DefaultPomFetcher)(resolvers)
         Workers.PomFileResolverCache or Workers.createPomResolver(fetcher)
@@ -30,6 +28,8 @@ object MavenDependencyManager {
     }
 
     repo.construct(Scope.COMPILE)
+
+    repo
   }
 
   def printUsage = {
@@ -60,25 +60,27 @@ object MavenDependencyManager {
     }
   }
 
-  def main(args: Array[String]) = {
-    if (args.length != 1) {
-      printUsage
-    } else {
-      val source = io.Source.fromFile(args(0))
-      val content = source.mkString
-      source.close()
+  def run(file: String) = {
+    val source = io.Source.fromFile(file)
+    val content = source.mkString
+    source.close()
 
-      val measure = new Measure()
+    val measure = new Measure()
+    val repo = measure.time("Network IO") { createRepo(content) }
 
-      measure.time("Network IO") { createRepo(content) }
-
-      println("\n\n================  Resolution Result   ==================".bold)
-      measure.time("Resolution") { resolve } match {
-        case Left(set) => printTree(repo.buildTree(set))
-        case Right(tree) => printTree(tree)
-      }
-
-      println(measure)
+    println("\n\n================  Resolution Result   ==================".bold)
+    measure.time("Resolution") { resolve(repo) } match {
+      case Left(set) => printTree(repo.buildTree(set))
+      case Right(tree) => printTree(tree)
     }
+
+    println(measure)
+  }
+
+  def main(args: Array[String]) = {
+    if (args.length != 1)
+      printUsage
+    else
+      run(args(0))
   }
 }
