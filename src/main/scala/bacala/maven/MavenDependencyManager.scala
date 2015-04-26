@@ -41,20 +41,19 @@ object MavenDependencyManager {
   }
 
   def printTree(tree: TreeT, level: Int = 0): Unit = {
-    def tip = "  " * level + (if (level == 0) "" else "~>")
+    def tip = "  " * (level - 1)
     tree match {
       case Node(pkg, children) =>
+        if (level != 0) println(tip + pkg)
         children.foreach { case (edge, child) =>
           edge match {
             case InfectedEdge(dep, to) =>
-              println(tip +  pkg.bold + " dependency " + dep + " resolved to:" + to)
               printTree(child, level+1) // depth-first
             case ConflictEdge(dep, conflicts) =>
-              println((tip +  pkg + " dependency " + dep + " leads to conflict").red)
+              println((tip + "Dependency " + dep + " leads to conflict").red)
             case MissingEdge(dep) =>
-              println((tip +  pkg + " dependency " + dep + " can't be resolved").red)
+              println((tip + "Dependency " + dep + " can't be resolved").red)
             case HealthyEdge(dep, to) =>
-              println(tip +  pkg.bold + " dependency " + dep + " resolved to:" + to)
               printTree(child, level+1) // depth-first
           }
         }
