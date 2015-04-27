@@ -33,10 +33,10 @@ The input XML is a POM file.
   - [x] support chaining multiple repositories
   - [x] support excludes in POM
   - [ ] support SNAPSHOT versioning
-- [ ] resolve dependency via SAT solver
+- [x] resolve dependency via SAT solver
   - [x] find an assignment or answer impossible
-  - [ ] find the minimal conflict set
-  - [ ] find the optimal solution according to weighted value
+  - [x] find the minimal conflict set
+  - [x] find the optimal solution according to weighted value
 - [ ] support multiple resolver types
   - [ ] support FileSystem resolvers
   - [x] support URL resolvers
@@ -48,20 +48,7 @@ The input XML is a POM file.
   - [ ] support force a specific package
   - [ ] support configuration
   - [ ] support custom conflict management
-- [ ] support sbt file
-  - [ ] support configurations
-  - [ ] support chaining resolvers
-  - [ ] support exludes
-  - [ ] support force
-  - [ ] support `intransitive` dependency
-  - [ ] support direct dependency via `from`
-  - [ ] support scala version in dependency constraint
-  - [ ] support classifiers
-  - [ ] support custom conflict management
 - [ ] support download resources via Futures in parallel
-- [ ] resolve result visualization in html
-  - [ ] generate dependency graph
-  - [ ] generate logs
 
 ## Reference
 
