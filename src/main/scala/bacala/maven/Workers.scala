@@ -63,9 +63,6 @@ object Workers {
   }
 
   /** Creates new POM file resolver
-    *
-    * Problem: now for the POM parser, it can only use a single fetcher, unable to chain them
-    * but the parent or modules of a POM file may be found at different repos.
     */
   def createPomResolver(fetcher: Worker[JPackage, String]) = new Worker[JPackage, MavenPomData] {
     override def apply(pkg: JPackage) = {
