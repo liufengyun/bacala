@@ -8,7 +8,7 @@ trait DependencyTree { this: Repository =>
   type TreeT = Tree[PackageT, DependencyEdge[PackageT, DependencyT]]
 
   def buildTree(solution: Set[PackageT]): TreeT = {
-    def find(dep: DependencyT) = solution.find(_.artifact == dep.artifact).get
+    def find(dep: DependencyT) = solution.find(_.lib == dep.lib).get
     def build(pkg: PackageT, path: Seq[PackageT]): TreeT = {
       val root: TreeT = Node(pkg)
       (this.apply(pkg) :\ root) { case ((dep, _), tree) =>

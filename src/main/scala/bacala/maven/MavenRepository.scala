@@ -12,17 +12,17 @@ import Scope._
 /** Constructs the repository from initial constraints
   */
 abstract class MavenRepository(initial: MavenPomData) extends Repository {
-  type ArtifactT = MavenArtifact
-  type PackageT = MavenPackage
+  type LibT = JLib
+  type PackageT = JPackage
   type DependencyT = MavenDependency
   type DependenciesT = Set[(DependencyT, Set[PackageT])]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MavenResolver]): MavenPackage => Option[MavenPomData]
-  def makeMetaResolver(resolvers: Iterable[MavenResolver]): MavenArtifact => Option[Iterable[String]]
+  def makePomResolver(resolvers: Iterable[MavenResolver]): JPackage => Option[MavenPomData]
+  def makeMetaResolver(resolvers: Iterable[MavenResolver]): JLib => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
-  private val artifactsMap = new TrieMap[ArtifactT, Set[PackageT]]
+  private val libraries = new TrieMap[LibT, Set[PackageT]]
 
   // the root package
   def root = initial.pkg
@@ -31,13 +31,13 @@ abstract class MavenRepository(initial: MavenPomData) extends Repository {
     */
   def construct(scope: Scope) = {
     dependencies.clear
-    artifactsMap.clear
+    libraries.clear
     resolve(initial, scope, Set(), Set())
   }
 
   /** recursively builds the dependency closure
     */
-  def resolve(pom: MavenPomData, scope: Scope, excludes: Iterable[ArtifactT], path: Set[PackageT]): Unit = {
+  def resolve(pom: MavenPomData, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
     val MavenPomData(pkg, depsAll, resolvers) = pom
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
@@ -46,7 +46,7 @@ abstract class MavenRepository(initial: MavenPomData) extends Repository {
     val pomResolver = makePomResolver(resolvers)
 
     deps.foreach { dep =>
-      metaResolver(dep.artifact).map(vers => dep.resolve(vers).filter(p => pomResolver(p).nonEmpty)) match {
+      metaResolver(dep.lib).map(vers => dep.resolve(vers).filter(p => pomResolver(p).nonEmpty)) match {
         case Some(pkgs) =>
           val set = pkgs.toSet
 
@@ -60,7 +60,7 @@ abstract class MavenRepository(initial: MavenPomData) extends Repository {
           dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> set)))
 
           // update conflict set
-          artifactsMap += dep.artifact -> (set | artifactsMap.getOrElse(dep.artifact, Set()))
+          libraries += dep.lib -> (set | libraries.getOrElse(dep.lib, Set()))
 
           // recursive resolve
           set.filter(!path.contains(_)).foreach { p =>
@@ -97,5 +97,5 @@ abstract class MavenRepository(initial: MavenPomData) extends Repository {
 
   /** Returns all primitive conflicts in the repository
     */
-  override def conflicts = artifactsMap.toMap
+  override def conflicts = libraries.toMap
 }

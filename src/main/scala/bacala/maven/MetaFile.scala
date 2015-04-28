@@ -7,7 +7,7 @@ import bacala.core.Version
 
 /**
   * The object MetaFile is the interface to get all version definitions for
-  * an artifact. It does caching internally.
+  * a library. It does caching internally.
   */
 object MetaFileParser extends (String => Iterable[String]) {
   override def apply(metaData: String) = {

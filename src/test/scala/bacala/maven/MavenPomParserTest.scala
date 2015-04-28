@@ -2,6 +2,8 @@ package bacala.test.maven
 
 import bacala.test._
 import bacala.maven._
+import bacala.core.{JLib, JPackage}
+
 import scala.xml.XML
 
 class MavenPomParserSuite extends BasicSuite {
@@ -29,8 +31,8 @@ class MavenPomParserSuite extends BasicSuite {
       """, null)
 
     assert(pomFile.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "[2.11.3, 2.11.6)",   List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]",   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "[2.11.3, 2.11.6)",   List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]",   List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -51,7 +53,7 @@ class MavenPomParserSuite extends BasicSuite {
       """, null)
 
     assert(pomFile.deps === Seq(
-      MavenDependency(MavenArtifact("org.test", "config"), "2.4",   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.test", "config"), "2.4",   List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -78,7 +80,7 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "[2.11.3, 2.11.3]",   List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "[2.11.3, 2.11.3]",   List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -106,14 +108,14 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)",  List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)",  List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
   test("version defined in parent POM") {
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "3.2") => Some(
         """
           <project>
               <groupId>org.test</groupId>
@@ -153,7 +155,7 @@ scala-library
       """, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[JLib](), Scope.COMPILE, false)
     ))
 
   }
@@ -202,15 +204,15 @@ scala-library
       </project>
       """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(parent)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "3.2") => Some(parent)
     }
 
     val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "(2.11.0, 2.11.3), (2.11.3, 2.11.6)", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -274,19 +276,19 @@ scala-library
           </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
-      case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(m1)
-      case MavenPackage(MavenArtifact("org.test", "m2"), "2.4") => Some(m2)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "2.4") => Some(parent)
+      case JPackage(JLib("org.test", "m1"), "2.4") => Some(m1)
+      case JPackage(JLib("org.test", "m2"), "2.4") => Some(m2)
       case _ => None
     }
 
     val pom = MavenPomParser(parent, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "1.6", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -330,17 +332,17 @@ scala-library
           </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
-      case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(child)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "2.4") => Some(parent)
+      case JPackage(JLib("org.test", "m1"), "2.4") => Some(child)
       case _ => None
     }
 
     val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "1.6", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -408,19 +410,19 @@ scala-library
           </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "grandParent"), "1.2") => Some(grandParent)
-      case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
-      case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(child)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "grandParent"), "1.2") => Some(grandParent)
+      case JPackage(JLib("org.test", "parent"), "2.4") => Some(parent)
+      case JPackage(JLib("org.test", "m1"), "2.4") => Some(child)
       case _ => None
     }
 
     val pom = MavenPomParser(child, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "test-lib"), "1.1.1", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "test-lib"), "1.1.1", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "1.6", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -486,19 +488,19 @@ scala-library
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "2.4") => Some(parent)
-      case MavenPackage(MavenArtifact("org.test", "m1"), "2.4") => Some(m1)
-      case MavenPackage(MavenArtifact("org.test", "m2"), "2.4") => Some(m2)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "2.4") => Some(parent)
+      case JPackage(JLib("org.test", "m1"), "2.4") => Some(m1)
+      case JPackage(JLib("org.test", "m2"), "2.4") => Some(m2)
       case _ => None
     }
 
     val pom = MavenPomParser(parent, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps.toSet === Set(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "1.6", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false),
-      MavenDependency(MavenArtifact("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "1.6", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "config"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false),
+      MavenDependency(JLib("com.typesafe", "slick"), "(1.1.1, 1.2.1]", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
@@ -520,13 +522,13 @@ scala-library
       """, null)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.scala-lang", "scala-library"), "(0.0.0,)", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.scala-lang", "scala-library"), "(0.0.0,)", List[JLib](), Scope.COMPILE, false)
     ))
   }
 
   test("parse POM with groupId in parent section") {
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "parent"), "3.2") => Some(
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "parent"), "3.2") => Some(
         """
           <project>
               <groupId>org.test</groupId>
@@ -556,7 +558,7 @@ scala-library
       """, (rs: Iterable[MavenResolver]) => fetcher)
 
     assert(pom.deps === Seq(
-      MavenDependency(MavenArtifact("org.test", "scala-library"), "3.2", List[MavenArtifact](), Scope.COMPILE, false)
+      MavenDependency(JLib("org.test", "scala-library"), "3.2", List[JLib](), Scope.COMPILE, false)
     ))
 
   }

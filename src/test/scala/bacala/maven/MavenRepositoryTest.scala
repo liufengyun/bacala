@@ -2,6 +2,7 @@ package bacala.test.maven
 
 import bacala.test._
 import bacala.maven._
+import bacala.core.{JLib, JPackage}
 
 class MavenRepositorySuite extends BasicSuite {
   test("missing dependency should corresponds to an empty set") {
@@ -55,23 +56,23 @@ class MavenRepositorySuite extends BasicSuite {
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => pkg match {
-          case MavenArtifact(_, "B") => Some(Seq("1.0"))
-          case MavenArtifact(_, "C") => Some(Seq("1.3"))
+        (pkg: JLib) => pkg match {
+          case JLib(_, "B") => Some(Seq("1.0"))
+          case JLib(_, "C") => Some(Seq("1.3"))
           case _ => None
         }
       }
@@ -80,8 +81,8 @@ class MavenRepositorySuite extends BasicSuite {
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3")),
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "C"), "1.3")),
       Set()
     ))
     assert(repo.packages.size === 2)
@@ -152,30 +153,30 @@ class MavenRepositorySuite extends BasicSuite {
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "D"), "2.3"))
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "D"), "2.3"))
     ))
     assert(repo.packages.size === 2)
   }
@@ -245,29 +246,29 @@ class MavenRepositorySuite extends BasicSuite {
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set())
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).toSet == Set())
     assert(repo.packages.size === 1)
   }
 
@@ -336,30 +337,30 @@ class MavenRepositorySuite extends BasicSuite {
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.exclude", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.exclude", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "D"), "2.3"))
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "D"), "2.3"))
     ))
     assert(repo.packages.size === 2)
   }
@@ -432,40 +433,40 @@ class MavenRepositorySuite extends BasicSuite {
       </project>
           """
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     // compile scope
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "C"), "1.3"))
     ))
     assert(repo.packages.size === 2)
 
     // test scope
     repo.construct(Scope.TEST)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "C"), "1.3"))
     ))
-    assert(repo(MavenPackage(MavenArtifact("org.test", "C"), "1.3")).map(_._2).toSet == Set())
+    assert(repo(JPackage(JLib("org.test", "C"), "1.3")).map(_._2).toSet == Set())
     assert(repo.packages.size === 3)
   }
 
@@ -535,28 +536,28 @@ class MavenRepositorySuite extends BasicSuite {
           """
 
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).toSet == Set())
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).toSet == Set())
     assert(repo.packages.size === 3)
   }
 
@@ -633,29 +634,29 @@ class MavenRepositorySuite extends BasicSuite {
           """
 
 
-    val fetcher = (p: MavenPackage) => p match {
-      case MavenPackage(MavenArtifact("org.test", "root"), _) => Some(root)
-      case MavenPackage(MavenArtifact("org.test", "B"), _) => Some(b)
-      case MavenPackage(MavenArtifact("org.test", "C"), _) => Some(c)
-      case MavenPackage(MavenArtifact("org.test", "D"), _) => Some(d)
+    val fetcher = (p: JPackage) => p match {
+      case JPackage(JLib("org.test", "root"), _) => Some(root)
+      case JPackage(JLib("org.test", "B"), _) => Some(b)
+      case JPackage(JLib("org.test", "C"), _) => Some(c)
+      case JPackage(JLib("org.test", "D"), _) => Some(d)
       case _ => None
     }
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
       override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
+        (pkg: JPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
       }
 
       override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
-        (pkg: MavenArtifact) => Some(Seq())
+        (pkg: JLib) => Some(Seq())
       }
     }
 
     repo.construct(Scope.COMPILE)
 
-    assert(repo(MavenPackage(MavenArtifact("org.test", "B"), "1.0")).map(_._2).toSet == Set(
-      Set(MavenPackage(MavenArtifact("org.test", "C"), "1.3"))
+    assert(repo(JPackage(JLib("org.test", "B"), "1.0")).map(_._2).toSet == Set(
+      Set(JPackage(JLib("org.test", "C"), "1.3"))
     ))
     assert(repo.packages.size === 3)
   }

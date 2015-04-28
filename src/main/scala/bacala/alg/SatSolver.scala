@@ -16,29 +16,29 @@ import scala.collection.JavaConversions._
 class SatSolver[T <: Repository](val repository: T) extends Solver {
   type PackageT = repository.PackageT
   type DependencyT = repository.DependencyT
-  type ArtifactT = repository.ArtifactT
+  type LibT = repository.LibT
 
   abstract class Clause extends Ordered[Clause] {
     def compare(that: Clause) = if (this == that) 0 else this.hashCode() - that.hashCode()
   }
 
   case class DependencyClause(pkg: PackageT, dep: DependencyT) extends Clause
-  case class ConflictClause(artifact: ArtifactT, pkgs: Set[PackageT]) extends Clause
+  case class ConflictClause(lib: LibT, pkgs: Set[PackageT]) extends Clause
 
   private val allPackages = repository.packages
   private val allConflicts = repository.conflicts
   // cache the ranking of versions, highest version has lower rank
-  private val rankingCache = new MemoryCache[ArtifactT, Map[PackageT, Int]] {}
+  private val rankingCache = new MemoryCache[LibT, Map[PackageT, Int]] {}
 
   // the solver minimizes the objective function, so preferred package has a lower weight
   def weight(pkg: PackageT): Int = {
-    def rank(artf: ArtifactT) = {
+    def rank(artf: LibT) = {
       allConflicts(artf).toSeq.sortWith { (a, b) =>
         Version(a.version) > Version(b.version)
       }.zip(Stream.from(10)).toMap
     }
 
-    rankingCache.fetch(pkg.artifact, rank(pkg.artifact))(pkg)
+    rankingCache.fetch(pkg.lib, rank(pkg.lib))(pkg)
   }
 
   val objectiveFunction: Seq[WeightedObject[PackageT]] = {
@@ -80,9 +80,9 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
   def resolveEdge(clauses: Seq[Clause], dep: DependencyT): DependencyEdge[PackageT, DependencyT] = {
     clauses.find {
       case DependencyClause(pkg, _) =>
-        dep.artifact == pkg.artifact
+        dep.lib == pkg.lib
       case ConflictClause(artf, pkgs) =>
-        dep.artifact == artf
+        dep.lib == artf
     } map {
       case DependencyClause(pkg, _) =>
         InfectedEdge(dep, pkg)

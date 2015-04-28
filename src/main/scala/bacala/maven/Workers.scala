@@ -6,9 +6,9 @@ import bacala.util._
 /** Workers factory
   */
 object Workers {
-  object MetaFileResolverCache extends CachedWorker[MavenArtifact, Iterable[String]] with MemoryBase[MavenArtifact, Iterable[String]]
+  object MetaFileResolverCache extends CachedWorker[JLib, Iterable[String]] with MemoryBase[JLib, Iterable[String]]
 
-  object PomFileResolverCache extends CachedWorker[MavenPackage, MavenPomData] with MemoryBase[MavenPackage, MavenPomData]
+  object PomFileResolverCache extends CachedWorker[JPackage, MavenPomData] with MemoryBase[JPackage, MavenPomData]
 
   val mavenMainBase = "http://repo1.maven.org/maven2"
 
@@ -22,18 +22,18 @@ object Workers {
 
   /** Cache and reuses the POM fetchers
     */
-  object PomFetchers extends MemoryCache[String, Worker[MavenPackage, String]] {
-    def apply(url: String) = fetch(url, new CachedWorker[MavenPackage, String] with
-      MemoryBase[MavenPackage, String] {
+  object PomFetchers extends MemoryCache[String, Worker[JPackage, String]] {
+    def apply(url: String) = fetch(url, new CachedWorker[JPackage, String] with
+      MemoryBase[JPackage, String] {
       override val worker = new PomFetcher(url)
     })
   }
 
   /** Cache and reuses the Meta fetchers
     */
-  object MetaFetchers extends MemoryCache[String, Worker[MavenArtifact, String]] {
-    def apply(url: String) = fetch(url, new CachedWorker[MavenArtifact, String] with
-      MemoryBase[MavenArtifact, String] {
+  object MetaFetchers extends MemoryCache[String, Worker[JLib, String]] {
+    def apply(url: String) = fetch(url, new CachedWorker[JLib, String] with
+      MemoryBase[JLib, String] {
       override val worker = new MetaFetcher(url)
     })
   }
@@ -48,7 +48,7 @@ object Workers {
 
   /** Creates a chain of POM fetchers
     */
-  def chainPomFetchers(initial: Worker[MavenPackage, String])(resolvers: Iterable[MavenResolver]) = {
+  def chainPomFetchers(initial: Worker[JPackage, String])(resolvers: Iterable[MavenResolver]) = {
     (resolvers :\ initial) { (r, acc) =>
       acc or Workers.createPomFetcher(r.url)
     }
@@ -56,7 +56,7 @@ object Workers {
 
   /** Creates a chain of Meta fetchers
     */
-  def chainMetaFetchers(initial: Worker[MavenArtifact, String])(resolvers: Iterable[MavenResolver]) = {
+  def chainMetaFetchers(initial: Worker[JLib, String])(resolvers: Iterable[MavenResolver]) = {
     (resolvers :\ initial) { (r, acc) =>
       acc or Workers.createMetaFetcher(r.url)
     }
@@ -67,16 +67,16 @@ object Workers {
     * Problem: now for the POM parser, it can only use a single fetcher, unable to chain them
     * but the parent or modules of a POM file may be found at different repos.
     */
-  def createPomResolver(fetcher: Worker[MavenPackage, String]) = new Worker[MavenPackage, MavenPomData] {
-    override def apply(pkg: MavenPackage) = {
+  def createPomResolver(fetcher: Worker[JPackage, String]) = new Worker[JPackage, MavenPomData] {
+    override def apply(pkg: JPackage) = {
       fetcher(pkg).map(spec => MavenPomParser(spec, chainPomFetchers(fetcher)))
     }
   }
 
   /** Creates new Meta file resolver
     */
-  def createMetaResolver(fetcher: Worker[MavenArtifact, String]) = new Worker[MavenArtifact, Iterable[String]] {
-    override def apply(artf: MavenArtifact) = {
+  def createMetaResolver(fetcher: Worker[JLib, String]) = new Worker[JLib, Iterable[String]] {
+    override def apply(artf: JLib) = {
       fetcher(artf).map(meta => MetaFileParser(meta))
     }
   }

@@ -6,7 +6,7 @@ import bacala.alg.SatSolver
 import bacala.util.ConsoleHelper.ColorText
 
 object MavenDependencyManager {
-  type TreeT = Tree[MavenPackage, DependencyEdge[MavenPackage, MavenDependency]]
+  type TreeT = Tree[JPackage, DependencyEdge[JPackage, MavenDependency]]
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))

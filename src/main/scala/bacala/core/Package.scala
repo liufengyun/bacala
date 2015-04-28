@@ -3,7 +3,7 @@ package bacala.core
 /** Abstract representation of a library
   */
 
-abstract class Artifact {
+abstract class Lib {
   def id: String // unique identifier of the library
 
   override def hashCode = {
@@ -11,8 +11,8 @@ abstract class Artifact {
   }
 
   override def equals(other: Any) = other match {
-    case artifact: Artifact =>
-      this.id == artifact.id
+    case lib: Lib =>
+      this.id == lib.id
     case _ => false
   }
 }
@@ -20,17 +20,17 @@ abstract class Artifact {
 /** Abstract representation of a package
   */
 abstract class Package {
-  type ArtifactT <: Artifact
-  def artifact: ArtifactT
+  type LibT <: Lib
+  def lib: LibT
   def version: String // version number
 
-  override def toString = artifact + "-" + version
+  override def toString = lib + "-" + version
 }
 
 /** Abstract representation of a dependency
   */
 abstract class Dependency {
-  type ArtifactT <: Artifact
-  def artifact: ArtifactT // this dependency is on which artifact
+  type LibT <: Lib
+  def lib: LibT // this dependency is on which library
   def versionConstraint: String // version constraint
 }

@@ -1,8 +1,9 @@
 package bacala.maven
 
-
 import scala.xml.XML
 import scala.xml.Node
+
+import bacala.core.{JLib, JPackage}
 import bacala.util.Cache
 import bacala.util.ConsoleHelper.ColorText
 import Scope._
@@ -100,7 +101,7 @@ object Property {
   */
 
 class PomFile(val node: Node) {
-  type Fetcher = MavenPackage => Option[String]
+  type Fetcher = JPackage => Option[String]
 
   var parent: PomFile = null
   var modules: Seq[PomFile] = null
@@ -145,24 +146,24 @@ class PomFile(val node: Node) {
 
   /** Resolve version which can be a property, a range, or defined in parent file
     */
-  private def resolveVersion(artifact: MavenArtifact, ver: String) = ver match {
+  private def resolveVersion(lib: JLib, ver: String) = ver match {
     case Property(prop) =>
       Property.resolve(node, prop) match {
         case Some(v) => v
         case None =>
-          println("Warning: can't resolve version specification $prop for $artifact in the parent POM of $currentPackage".yellow)
-          defaultVersion(artifact)
+          println("Warning: can't resolve version specification $prop for $lib in the parent POM of $currentPackage".yellow)
+          defaultVersion(lib)
       }
     case VersionRange(range) => ver
     case "" if parent != null =>
-      parent.managedVersionFor(artifact) match {  // version specified in parent POM file
+      parent.managedVersionFor(lib) match {  // version specified in parent POM file
         case Some(ver) => ver
         case None =>
-          println(("Warning: can't find version specification in parent for " + artifact + " in the parent POM of " + currentPackage).yellow)
-          defaultVersion(artifact)
+          println(("Warning: can't find version specification in parent for " + lib + " in the parent POM of " + currentPackage).yellow)
+          defaultVersion(lib)
       }
     case ver =>
-      defaultVersion(artifact)
+      defaultVersion(lib)
       // throw new InvalidVersionFormat("Unknown version format: " + ver + " when parsing POM file of " + currentPackage)
   }
 
@@ -179,14 +180,14 @@ class PomFile(val node: Node) {
     case _ => gid
   }
 
-  /** Resolves artifact version specified in dependencyManagement section
+  /** Resolves lib version specified in dependencyManagement section
     */
-  private def managedVersionFor(artifact: MavenArtifact): Option[String] = {
+  private def managedVersionFor(lib: JLib): Option[String] = {
     val deps = (node \ "dependencyManagement" \ "dependencies" \ "dependency")
     deps.filter { dep =>
-      artifact == MavenArtifact((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
+      lib == JLib((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
     }.map { dep =>
-      resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
+      resolveVersion(JLib(groupId, artifactId), (dep \ "version").text.trim)
     }.headOption
   }
 
@@ -203,7 +204,7 @@ class PomFile(val node: Node) {
 
     val artifactId = (node \ "artifactId").text.trim
 
-    MavenPackage(MavenArtifact(groupId, artifactId), version)
+    JPackage(JLib(groupId, artifactId), version)
   }
 
   /** Whether current POM file has a <parent> section
@@ -217,7 +218,7 @@ class PomFile(val node: Node) {
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
-    fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
+    fetcher(JPackage(JLib(groupId, artifactId), version)) map { spec=>
       PomFile(spec)
     } match {
       case Some(pom) => pom
@@ -237,7 +238,7 @@ class PomFile(val node: Node) {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
-      fetcher(MavenPackage(MavenArtifact(groupId, artifactId), version)) map { spec=>
+      fetcher(JPackage(JLib(groupId, artifactId), version)) map { spec=>
         PomFile(spec)
       } match {
         case Some(pom) => pom
@@ -248,11 +249,11 @@ class PomFile(val node: Node) {
     }).filter(_ != null)
   }
 
-  /** if there's no default version for an artifact, use the default version
+  /** if there's no default version for an lib, use the default version
     */
-  def defaultVersion(artifact: MavenArtifact) = {
-    val ver = if (artifact.groupId == groupId) version else "(0.0.0,)"
-    println(("Warning: version unspecified for " + artifact + " in " + currentPackage + " - using " + ver).yellow)
+  def defaultVersion(lib: JLib) = {
+    val ver = if (lib.groupId == groupId) version else "(0.0.0,)"
+    println(("Warning: version unspecified for " + lib + " in " + currentPackage + " - using " + ver).yellow)
     ver
   }
 
@@ -266,12 +267,12 @@ class PomFile(val node: Node) {
     val optional = (dep \ "optional").text.trim == "true"
 
     // version range specification can be a complex
-    val range = resolveVersion(MavenArtifact(groupId, artifactId), (dep \ "version").text.trim)
+    val range = resolveVersion(JLib(groupId, artifactId), (dep \ "version").text.trim)
 
     // parse exclusions
     val exclusions = (dep \ "exclusions" \ "exclusion").map(parseExclusion _)
 
-    MavenDependency(MavenArtifact(groupId, artifactId), range, exclusions, scope, optional)
+    MavenDependency(JLib(groupId, artifactId), range, exclusions, scope, optional)
   }
 
   /** Parses exclusion in dependency
@@ -280,7 +281,7 @@ class PomFile(val node: Node) {
     val groupId = (exclusion \ "groupId").text.trim
     val artifactId = (exclusion \ "artifactId").text.trim
 
-    MavenArtifact(groupId, artifactId)
+    JLib(groupId, artifactId)
   }
 
   /** Parses repositories in POM file
@@ -302,7 +303,7 @@ object PomFile {
 }
 
 object MavenPomParser {
-  type Fetcher = MavenPackage => Option[String]
+  type Fetcher = JPackage => Option[String]
   type FetcherMaker = Iterable[MavenResolver] => Fetcher
 
   /** Used to parse a given POM file
