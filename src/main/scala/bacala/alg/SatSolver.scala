@@ -32,8 +32,8 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
 
   // the solver minimizes the objective function, so preferred package has a lower weight
   def weight(pkg: PackageT): Int = {
-    def rank(artf: LibT) = {
-      allConflicts(artf).toSeq.sortWith { (a, b) =>
+    def rank(lib: LibT) = {
+      allConflicts(lib).toSeq.sortWith { (a, b) =>
         Version(a.version) > Version(b.version)
       }.zip(Stream.from(10)).toMap
     }
@@ -64,8 +64,8 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
     }
 
     // conflicts
-    for ( (artf, pkgs) <- allConflicts ) {
-      helper.atMost(1, pkgs.toSeq:_*).named(ConflictClause(artf, pkgs))
+    for ( (lib, pkgs) <- allConflicts ) {
+      helper.atMost(1, pkgs.toSeq:_*).named(ConflictClause(lib, pkgs))
     }
 
     if (helper.hasASolution) Left(helper.getASolution().toSet)
@@ -81,8 +81,8 @@ class SatSolver[T <: Repository](val repository: T) extends Solver {
     clauses.find {
       case DependencyClause(pkg, _) =>
         dep.lib == pkg.lib
-      case ConflictClause(artf, pkgs) =>
-        dep.lib == artf
+      case ConflictClause(lib, pkgs) =>
+        dep.lib == lib
     } map {
       case DependencyClause(pkg, _) =>
         InfectedEdge(dep, pkg)

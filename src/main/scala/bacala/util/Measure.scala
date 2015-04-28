@@ -7,6 +7,7 @@ import bacala.util.ConsoleHelper.ColorText
   */
 class Measure {
   private var pairs: Seq[(String, Long)] = Seq()
+
   def time[A](name: String)(a: => A) = {
     val now = System.nanoTime
     val result = a

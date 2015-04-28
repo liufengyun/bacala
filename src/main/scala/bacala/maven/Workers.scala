@@ -76,8 +76,8 @@ object Workers {
   /** Creates new Meta file resolver
     */
   def createMetaResolver(fetcher: Worker[JLib, String]) = new Worker[JLib, Iterable[String]] {
-    override def apply(artf: JLib) = {
-      fetcher(artf).map(meta => MetaFileParser(meta))
+    override def apply(lib: JLib) = {
+      fetcher(lib).map(meta => MetaFileParser(meta))
     }
   }
 }

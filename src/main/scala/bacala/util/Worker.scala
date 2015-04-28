@@ -44,7 +44,7 @@ trait CachedWorker[T, R] extends Worker[T, R] { outer =>
   }
 }
 
-/** Implements memory-based cache with a default worker
+/** Provides memory-based cache for worker
   */
 trait MemoryBase[T, R] { this: CachedWorker[T, R] =>
   val cache = new MemoryCache[T, Option[R]] {}
