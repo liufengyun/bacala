@@ -6,17 +6,17 @@ import bacala.alg.SatSolver
 import bacala.util.ConsoleHelper.ColorText
 
 object MavenDependencyManager {
-  type TreeT = Tree[JPackage, DependencyEdge[JPackage, MavenDependency]]
+  type TreeT = Tree[MPackage, DependencyEdge[MPackage, MDependency]]
 
   def createRepo(spec: String) = {
     val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))
     val repo = new MavenRepository(pom) with DependencyTree {
-      override def makePomResolver(resolvers: Iterable[MavenResolver]) = {
+      override def makePomResolver(resolvers: Iterable[MResolver]) = {
         val fetcher = Workers.chainPomFetchers(Workers.DefaultPomFetcher)(resolvers)
         Workers.PomFileResolverCache or Workers.createPomResolver(fetcher)
       }
 
-      override def makeMetaResolver(resolvers: Iterable[MavenResolver]) = {
+      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
         val fetcher = Workers.chainMetaFetchers(Workers.DefaultMetaFetcher)(resolvers)
         Workers.MetaFileResolverCache or Workers.createMetaResolver(fetcher)
       }

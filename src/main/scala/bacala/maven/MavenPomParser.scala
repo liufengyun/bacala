@@ -3,7 +3,6 @@ package bacala.maven
 import scala.xml.XML
 import scala.xml.Node
 
-import bacala.core.{JLib, JPackage}
 import bacala.util.Cache
 import bacala.util.ConsoleHelper.ColorText
 import Scope._
@@ -101,7 +100,7 @@ object Property {
   */
 
 class PomFile(val node: Node) {
-  type Fetcher = JPackage => Option[String]
+  type Fetcher = MPackage => Option[String]
 
   var parent: PomFile = null
   var modules: Seq[PomFile] = null
@@ -116,7 +115,7 @@ class PomFile(val node: Node) {
 
   /** Parses the POM file and return the dependency constraints
     */
-  def parse(aggregator: PomFile = null)(implicit fetcher: Fetcher): MavenPomData = {
+  def parse(aggregator: PomFile = null)(implicit fetcher: Fetcher): MFile = {
     if (hasParent) parent = loadParent(fetcher)
     if (hasModules) modules = loadModules(fetcher)
 
@@ -128,11 +127,11 @@ class PomFile(val node: Node) {
     if (modules != null)
       constraints = (modules :\ constraints) { (m, acc) => m.parse(this).deps ++: acc }
 
-    MavenPomData(currentPackage, constraints, repositories)
+    MFile(currentPackage, constraints, repositories)
   }
 
   // get all parents in the chain
-  def doParseParent(implicit fetcher: Fetcher): Iterable[MavenDependency] = {
+  def doParseParent(implicit fetcher: Fetcher): Iterable[MDependency] = {
     // we need to load parent here because *parse* is not called for current instance
     if (parent == null && hasParent) parent = loadParent(fetcher)
 
@@ -146,7 +145,7 @@ class PomFile(val node: Node) {
 
   /** Resolve version which can be a property, a range, or defined in parent file
     */
-  private def resolveVersion(lib: JLib, ver: String) = ver match {
+  private def resolveVersion(lib: MLib, ver: String) = ver match {
     case Property(prop) =>
       Property.resolve(node, prop) match {
         case Some(v) => v
@@ -182,12 +181,12 @@ class PomFile(val node: Node) {
 
   /** Resolves lib version specified in dependencyManagement section
     */
-  private def managedVersionFor(lib: JLib): Option[String] = {
+  private def managedVersionFor(lib: MLib): Option[String] = {
     val deps = (node \ "dependencyManagement" \ "dependencies" \ "dependency")
     deps.filter { dep =>
-      lib == JLib((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
+      lib == MLib((dep \ "groupId").text.trim, (dep \ "artifactId").text.trim)
     }.map { dep =>
-      resolveVersion(JLib(groupId, artifactId), (dep \ "version").text.trim)
+      resolveVersion(MLib(groupId, artifactId), (dep \ "version").text.trim)
     }.headOption
   }
 
@@ -204,7 +203,7 @@ class PomFile(val node: Node) {
 
     val artifactId = (node \ "artifactId").text.trim
 
-    JPackage(JLib(groupId, artifactId), version)
+    MPackage(MLib(groupId, artifactId), version)
   }
 
   /** Whether current POM file has a <parent> section
@@ -218,7 +217,7 @@ class PomFile(val node: Node) {
     val artifactId = (node \ "parent" \ "artifactId").text.trim
     val version = (node \ "parent" \ "version").text.trim
 
-    fetcher(JPackage(JLib(groupId, artifactId), version)) map { spec=>
+    fetcher(MPackage(MLib(groupId, artifactId), version)) map { spec=>
       PomFile(spec)
     } match {
       case Some(pom) => pom
@@ -238,7 +237,7 @@ class PomFile(val node: Node) {
     (node \ "modules" \ "module").map({module =>
       val artifactId = module.text.trim
       // groupId and version are the same as the aggregating project
-      fetcher(JPackage(JLib(groupId, artifactId), version)) map { spec=>
+      fetcher(MPackage(MLib(groupId, artifactId), version)) map { spec=>
         PomFile(spec)
       } match {
         case Some(pom) => pom
@@ -251,7 +250,7 @@ class PomFile(val node: Node) {
 
   /** if there's no default version for an lib, use the default version
     */
-  def defaultVersion(lib: JLib) = {
+  def defaultVersion(lib: MLib) = {
     val ver = if (lib.groupId == groupId) version else "(0.0.0,)"
     println(("Warning: version unspecified for " + lib + " in " + currentPackage + " - using " + ver).yellow)
     ver
@@ -267,12 +266,12 @@ class PomFile(val node: Node) {
     val optional = (dep \ "optional").text.trim == "true"
 
     // version range specification can be a complex
-    val range = resolveVersion(JLib(groupId, artifactId), (dep \ "version").text.trim)
+    val range = resolveVersion(MLib(groupId, artifactId), (dep \ "version").text.trim)
 
     // parse exclusions
     val exclusions = (dep \ "exclusions" \ "exclusion").map(parseExclusion _)
 
-    MavenDependency(JLib(groupId, artifactId), range, exclusions, scope, optional)
+    MDependency(MLib(groupId, artifactId), range, exclusions, scope, optional)
   }
 
   /** Parses exclusion in dependency
@@ -281,7 +280,7 @@ class PomFile(val node: Node) {
     val groupId = (exclusion \ "groupId").text.trim
     val artifactId = (exclusion \ "artifactId").text.trim
 
-    JLib(groupId, artifactId)
+    MLib(groupId, artifactId)
   }
 
   /** Parses repositories in POM file
@@ -291,7 +290,7 @@ class PomFile(val node: Node) {
     val name = (repo \ "name").text.trim
     val url = (repo \ "url").text.trim
 
-    MavenResolver(id, name, url)
+    MResolver(id, name, url)
   }
 }
 
@@ -303,14 +302,14 @@ object PomFile {
 }
 
 object MavenPomParser {
-  type Fetcher = JPackage => Option[String]
-  type FetcherMaker = Iterable[MavenResolver] => Fetcher
+  type Fetcher = MPackage => Option[String]
+  type FetcherMaker = Iterable[MResolver] => Fetcher
 
   /** Used to parse a given POM file
     *
     * Parser requires a fetcher to get POM files for parent and modules
     */
-  def apply(spec: String, maker: FetcherMaker): MavenPomData = {
+  def apply(spec: String, maker: FetcherMaker): MFile = {
     val pom = PomFile(spec)
 
     implicit val fetcher = if (maker != null) maker(pom.repositories) else null

@@ -1,18 +1,30 @@
 package bacala.maven
 
-import bacala.core.{JLib, Dependency, JPackage, Version}
+import bacala.core._
 import bacala.maven.Scope._
 
 /** This file defines the structure of the PomFile
   */
 
+case class MLib(groupId: String, artifactId: String) extends Lib {
+  override def id =  groupId + ":" + artifactId
+
+  override def toString = id
+}
+
+case class MPackage(lib: MLib, version:String) extends Package {
+  type LibT = MLib
+
+  def artifactId = lib.artifactId
+  def groupId = lib.groupId
+}
 
 /**
   * Reference
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
-case class MavenDependency(lib: JLib, versionConstraint: String, exclusions: Iterable[JLib], scope: Scope, optional: Boolean) extends Dependency {
-  type LibT = JLib
+case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterable[MLib], scope: Scope, optional: Boolean) extends Dependency {
+  type LibT = MLib
 
   def inScope(scp: Scope) = scp match {
     case TEST => scope == COMPILE || scope == TEST
@@ -20,14 +32,14 @@ case class MavenDependency(lib: JLib, versionConstraint: String, exclusions: Ite
   }
 
   // whether current dependency can be excluded
-  def canExclude(exclusions: Iterable[JLib]) = exclusions.exists { exclude =>
+  def canExclude(exclusions: Iterable[MLib]) = exclusions.exists { exclude =>
     (exclude == this.lib) ||
     (exclude.groupId == this.lib.groupId && exclude.artifactId == "*") ||
     (exclude.groupId == "*" && exclude.artifactId == "*")
   }
 
   // packages compatible with this dependency
-  def resolve(versions: Iterable[String]): Iterable[JPackage] = {
+  def resolve(versions: Iterable[String]): Iterable[MPackage] = {
     val range = VersionRange(versionConstraint)
     val compatibleVersions = versions.filter(v => range.contains(Version(v))).toSet
 
@@ -36,7 +48,7 @@ case class MavenDependency(lib: JLib, versionConstraint: String, exclusions: Ite
       compatibleVersions + versionConstraint
     else compatibleVersions
 
-    validVersions.map(v => JPackage(lib, v))
+    validVersions.map(v => MPackage(lib, v))
   }
 
   override def toString = {
@@ -44,6 +56,6 @@ case class MavenDependency(lib: JLib, versionConstraint: String, exclusions: Ite
   }
 }
 
-case class MavenResolver(id: String, name: String, url: String)
+case class MResolver(id: String, name: String, url: String)
 
-case class MavenPomData(pkg: JPackage, deps: Iterable[MavenDependency], resolvers: Iterable[MavenResolver])
+case class MFile(pkg: MPackage, deps: Iterable[MDependency], resolvers: Iterable[MResolver])

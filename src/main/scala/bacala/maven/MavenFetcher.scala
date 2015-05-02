@@ -1,12 +1,11 @@
 package bacala.maven
 
 import bacala.util._
-import bacala.core.{JLib, JPackage}
 
 /** Fetches POM for a package
   */
-class PomFetcher(base: String) extends Worker[JPackage, String] {
-  override def apply(p: JPackage) = HttpFetcher.get(pomURL(p))
+class PomFetcher(base: String) extends Worker[MPackage, String] {
+  override def apply(p: MPackage) = HttpFetcher.get(pomURL(p))
 
   /** Returns POM URL for a package
     *
@@ -14,7 +13,7 @@ class PomFetcher(base: String) extends Worker[JPackage, String] {
     *
     * e.g. http://repo1.maven.org/maven2/org/scala-lang/scala-library/2.11.6/scala-library-2.11.6.pom
     */
-  def pomURL(p: JPackage) = {
+  def pomURL(p: MPackage) = {
     s"${base}/${p.groupId.replace(".", "/")}/${p.artifactId}/${p.version}/${p.artifactId}-${p.version}.pom"
   }
 }
@@ -22,10 +21,10 @@ class PomFetcher(base: String) extends Worker[JPackage, String] {
 
 /** Fetches Meta file for an artifact
   */
-class MetaFetcher(base: String) extends Worker[JLib, String] {
+class MetaFetcher(base: String) extends Worker[MLib, String] {
   /** Fetches the Meta file
     */
-  override def apply(lib: JLib) = HttpFetcher.get(metaDataURL(lib))
+  override def apply(lib: MLib) = HttpFetcher.get(metaDataURL(lib))
 
   /** Returns the meta-data URL for a library
     *
@@ -34,7 +33,7 @@ class MetaFetcher(base: String) extends Worker[JLib, String] {
     * e.g.
     * http://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml
     */
-  def metaDataURL(lib: JLib) = {
+  def metaDataURL(lib: MLib) = {
     s"${base}/${lib.groupId.replace(".", "/")}/${lib.artifactId}/maven-metadata.xml"
   }
 }

@@ -11,15 +11,15 @@ import Scope._
 
 /** Constructs the repository from initial constraints
   */
-abstract class MavenRepository(initial: MavenPomData) extends Repository {
-  type LibT = JLib
-  type PackageT = JPackage
-  type DependencyT = MavenDependency
+abstract class MavenRepository(initial: MFile) extends Repository {
+  type LibT = MLib
+  type PackageT = MPackage
+  type DependencyT = MDependency
   type DependenciesT = Set[(DependencyT, Set[PackageT])]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MavenResolver]): JPackage => Option[MavenPomData]
-  def makeMetaResolver(resolvers: Iterable[MavenResolver]): JLib => Option[Iterable[String]]
+  def makePomResolver(resolvers: Iterable[MResolver]): MPackage => Option[MFile]
+  def makeMetaResolver(resolvers: Iterable[MResolver]): MLib => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val libraries = new TrieMap[LibT, Set[PackageT]]
@@ -37,8 +37,8 @@ abstract class MavenRepository(initial: MavenPomData) extends Repository {
 
   /** recursively builds the dependency closure
     */
-  def resolve(pom: MavenPomData, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
-    val MavenPomData(pkg, depsAll, resolvers) = pom
+  def resolve(pom: MFile, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
+    val MFile(pkg, depsAll, resolvers) = pom
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
     // the resolvers will be added to the default resolver
