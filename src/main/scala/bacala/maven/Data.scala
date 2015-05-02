@@ -3,15 +3,23 @@ package bacala.maven
 import bacala.core._
 import bacala.maven.Scope._
 
-/** This file defines the structure of the PomFile
+/** This file defines the structure of the POM file
   */
 
+/** Represents the pair (groupId, artifactId), which is the unit for versioning
+  */
 case class MLib(groupId: String, artifactId: String) extends Lib {
   override def id =  groupId + ":" + artifactId
 
   override def toString = id
 }
 
+/** An MPackage refers to an artifact of specific version
+  *
+  * An MPackage refers to many dependencies with different scopes.
+  * Which subset is effective in a specific scenario is computed
+  * from transitive dependency from initial dependencies.
+  */
 case class MPackage(lib: MLib, version:String) extends Package {
   type LibT = MLib
 
@@ -23,7 +31,8 @@ case class MPackage(lib: MLib, version:String) extends Package {
   * Reference
   * - https://maven.apache.org/guides/introduction/introduction-to-optional-and-excludes-dependencies.html
   */
-case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterable[MLib], scope: Scope, optional: Boolean) extends Dependency {
+case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterable[MLib],
+  scope: Scope, optional: Boolean) extends Dependency {
   type LibT = MLib
 
   def inScope(scp: Scope) = scp match {

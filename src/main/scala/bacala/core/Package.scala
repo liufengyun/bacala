@@ -1,8 +1,9 @@
 package bacala.core
 
 /** Abstract representation of a library
+  *
+  * A library is the unit for versioning
   */
-
 abstract class Lib {
   def id: String // unique identifier of the library
 
@@ -18,6 +19,9 @@ abstract class Lib {
 }
 
 /** Abstract representation of a package
+  *
+  * Package is the unit of conflicts. Two packages of the same library but
+  * with different versions conflict.
   */
 abstract class Package {
   type LibT <: Lib
