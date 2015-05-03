@@ -10,6 +10,11 @@ import bacala.core.{Lib, Dependency, Package, Version}
 case class ILib(groupId: String, name: String) extends Lib {
   override def id =  groupId + ":" + name
 
+  def isMatch(exclude: IExclude): Boolean = {
+    (exclude.lib.groupId == groupId || exclude.lib.groupId == "*") &&
+    (exclude.lib.name == name || exclude.lib.name == "*")
+  }
+
   override def toString = id
 }
 
@@ -32,7 +37,11 @@ case class IPackage(lib: ILib, version: String) extends Package {
 }
 
 case class IArtifact(name: String, typ: String, ext: String,
-  confs: Seq[String], url: String)
+  confs: Seq[String], url: String) {
+  def isMatch(exclude: IExclude): Boolean = {
+    exclude.name == "*" || exclude.name == name
+  }
+}
 
 case class IConf(name: String, description: String, visibility: String,
   extendList: Seq[String], transitive: Boolean, deprecated: String)
@@ -51,6 +60,10 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
   artifacts: Seq[IDepArtifact], excludes: Seq[IExclude],
   includes: Seq[IInclude], mapping: Map[String, Seq[String]]) extends Dependency {
   type LibT = ILib
+
+  def isMatch(exclude: IExclude): Boolean = {
+    lib.isMatch(exclude) && exclude.name == "*"
+  }
 }
 
 /** Representation of Ivy file
@@ -62,19 +75,48 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
 case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
   artifacts: Set[IArtifact], excludes: Set[IExclude]) {
 
+  /** Filters dependencies according to given effective configurations and excludes
+    */
   def filterDependencies(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Seq[IDependency] = {
-    ???
+    deps.filter { dep =>
+      (effectiveConfs.contains("*") ||
+        dep.mapping.contains("*") ||
+        dep.mapping.keys.exists(effectiveConfs.contains)) &&
+      toExclude.forall(!dep.isMatch(_))
+    }
   }
 
+  /** Filters artifacts according to given effective configurations and excludes
+    */
   def filterArtifacts(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Set[String] = {
-    ???
+    artifacts.filter { artifact =>
+      (effectiveConfs.contains("*") ||
+        artifact.confs.contains("*") ||
+        artifact.confs.exists(effectiveConfs.contains)) &&
+      toExclude.forall(exclude => !pkg.lib.isMatch(exclude) || !artifact.isMatch(exclude))
+    } map(_.name)
   }
 
+  /** Filters excludes which are effective in the transitive dependency *dep*
+    */
   def filterExcludes(effectiveConfs: Set[String], dep: IDependency): Seq[IExclude] = {
-    ???
+    (dep.excludes ++ excludes) filter { exclude =>
+      effectiveConfs.contains("*") ||
+      exclude.confs.contains("*") ||
+      exclude.confs.exists(effectiveConfs.contains)
+    }
   }
 
+  /** Filters active configurations in the dependency module
+    */
   def filterDepConfigurations(effectiveConfs: Set[String], dep: IDependency): Set[String] = {
-    ???
+    (dep.mapping :\ Set[String]()) { case ((from, tos), acc) =>
+      if (effectiveConfs.contains("*") ||
+        effectiveConfs.contains(from) ||
+        from == "*")
+        acc ++ tos
+      else
+        acc
+    }
   }
 }
