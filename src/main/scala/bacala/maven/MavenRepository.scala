@@ -11,14 +11,14 @@ import Scope._
 
 /** Constructs the repository from initial constraints
   */
-abstract class MavenRepository(initial: MFile) extends Repository {
+abstract class MavenRepository(initial: MDescriptor) extends Repository {
   type LibT = MLib
   type PackageT = MPackage
   type DependencyT = MDependency
   type DependenciesT = Set[(DependencyT, Set[PackageT])]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MResolver]): MPackage => Option[MFile]
+  def makePomResolver(resolvers: Iterable[MResolver]): MPackage => Option[MDescriptor]
   def makeMetaResolver(resolvers: Iterable[MResolver]): MLib => Option[Iterable[String]]
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
@@ -37,8 +37,8 @@ abstract class MavenRepository(initial: MFile) extends Repository {
 
   /** recursively builds the dependency closure
     */
-  def resolve(pom: MFile, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
-    val MFile(pkg, depsAll, resolvers) = pom
+  def resolve(pom: MDescriptor, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
+    val MDescriptor(pkg, depsAll, resolvers) = pom
     val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
 
     // the resolvers will be added to the default resolver

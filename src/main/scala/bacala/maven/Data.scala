@@ -14,7 +14,7 @@ case class MLib(groupId: String, artifactId: String) extends Lib {
   override def toString = id
 }
 
-/** An MPackage refers to an artifact of specific version
+/** An MPackage refers to an artifact of a specific version
   *
   * An MPackage refers to many dependencies with different scopes.
   * Which subset is effective in a specific scenario is computed
@@ -67,4 +67,4 @@ case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterabl
 
 case class MResolver(id: String, name: String, url: String)
 
-case class MFile(pkg: MPackage, deps: Iterable[MDependency], resolvers: Iterable[MResolver])
+case class MDescriptor(pkg: MPackage, deps: Iterable[MDependency], resolvers: Iterable[MResolver])

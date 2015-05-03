@@ -8,7 +8,7 @@ import bacala.util._
 object Workers {
   object MetaFileResolverCache extends CachedWorker[MLib, Iterable[String]] with MemoryBase[MLib, Iterable[String]]
 
-  object PomFileResolverCache extends CachedWorker[MPackage, MFile] with MemoryBase[MPackage, MFile]
+  object PomFileResolverCache extends CachedWorker[MPackage, MDescriptor] with MemoryBase[MPackage, MDescriptor]
 
   val mavenMainBase = "http://repo1.maven.org/maven2"
 
@@ -64,7 +64,7 @@ object Workers {
 
   /** Creates new POM file resolver
     */
-  def createPomResolver(fetcher: Worker[MPackage, String]) = new Worker[MPackage, MFile] {
+  def createPomResolver(fetcher: Worker[MPackage, String]) = new Worker[MPackage, MDescriptor] {
     override def apply(pkg: MPackage) = {
       fetcher(pkg).map(spec => MavenPomParser(spec, chainPomFetchers(fetcher)))
     }
