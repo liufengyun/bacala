@@ -29,6 +29,12 @@ abstract class Package {
   def version: String // version number
 
   override def toString = lib + "-" + version
+
+  override def equals(other: Any) = other match {
+    case pkg: Package =>
+      this.lib == pkg.lib && this.version == pkg.version
+    case _ => false
+  }
 }
 
 /** Abstract representation of a dependency

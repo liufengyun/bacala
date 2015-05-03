@@ -32,33 +32,26 @@ case class IPackage(lib: ILib, version: String) extends Package {
 }
 
 case class IArtifact(name: String, typ: String, ext: String,
-  confs: Seq[String], url: String, packaging: String)
+  confs: Seq[String], url: String)
 
 case class IConf(name: String, description: String, visibility: String,
-  extendList: List[String], transitive: Boolean, deprecated: String)
-
-case class IResolver(name: String, url: String, pattern: String,
-  ivys: Boolean, artifacts: Boolean)
+  extendList: Seq[String], transitive: Boolean, deprecated: String)
 
 case class IExclude(lib: ILib, name: String, typ: String, ext: String,
-  matcher: String, conf: Seq[String])
+  matcher: String, confs: Seq[String])
 
 case class IDepArtifact(name: String, typ: String, ext: String,
   confs: Seq[String], url: String)
 
-case class IDepChoice(name: String, typ: String, ext: String,
-  matcher: String, conf: Seq[String])
+case class IInclude(name: String, typ: String, ext: String,
+  matcher: String, confs: Seq[String])
 
 case class IDependency(lib: ILib, version: String, versionConstraint: String,
-  transitive: Boolean, force: Boolean, changing: Boolean, branch: String,
-  artifacts: Seq[IDepArtifact], excludes: Seq[IDepChoice],
-  includes: Seq[IDepChoice], confMap: Map[String, Seq[String]]) extends Dependency {
+  transitive: Boolean, force: Boolean, changing: Boolean,
+  artifacts: Seq[IDepArtifact], excludes: Seq[IExclude],
+  includes: Seq[IInclude], mapping: Map[String, Seq[String]]) extends Dependency {
   type LibT = ILib
 }
-
-case class IOverride(lib: ILib, branch: String, version: String, matcher: String)
-
-case class IConflict(lib: ILib, manager: String, versions: Seq[String], matcher: String)
 
 /** Representation of Ivy file
   *
@@ -66,6 +59,22 @@ case class IConflict(lib: ILib, manager: String, versions: Seq[String], matcher:
   * 2. Extends between Ivy files are handled by the parser
   * 3. Inclusion of configuration files are handled by the parser
   */
-case class IFile(pkg: IPackage, confs: Seq[IConf], deps: Seq[IDependency],
-  resolvers: Seq[IResolver], artifacts: Seq[IArtifact], excludes: Seq[IExclude],
-  overrides: Seq[IOverride], conflicts: Seq[IConflict])
+case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
+  artifacts: Set[IArtifact], excludes: Set[IExclude]) {
+
+  def filterDependencies(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Seq[IDependency] = {
+    ???
+  }
+
+  def filterArtifacts(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Set[String] = {
+    ???
+  }
+
+  def filterExcludes(effectiveConfs: Set[String], dep: IDependency): Seq[IExclude] = {
+    ???
+  }
+
+  def filterDepConfigurations(effectiveConfs: Set[String], dep: IDependency): Set[String] = {
+    ???
+  }
+}
