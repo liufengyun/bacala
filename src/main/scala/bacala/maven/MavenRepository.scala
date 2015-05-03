@@ -38,8 +38,8 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
   /** recursively builds the dependency closure
     */
   def resolve(pom: MDescriptor, scope: Scope, excludes: Iterable[LibT], path: Set[PackageT]): Unit = {
-    val MDescriptor(pkg, depsAll, resolvers) = pom
-    val deps = depsAll.filter(dep => dep.inScope(scope) && !dep.canExclude(excludes) && !dep.optional)
+    val MDescriptor(pkg, _, resolvers) = pom
+    val deps = pom.filterDependencies(scope, excludes)
 
     // the resolvers will be added to the default resolver
     val metaResolver = makeMetaResolver(resolvers)

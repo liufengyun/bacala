@@ -41,9 +41,9 @@ case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterabl
   }
 
   // whether current dependency can be excluded
-  def canExclude(exclusions: Iterable[MLib]) = exclusions.exists { exclude =>
-    (exclude == this.lib) ||
-    (exclude.groupId == this.lib.groupId && exclude.artifactId == "*") ||
+  def isMatch(exclude: MLib) = {
+    exclude == lib ||
+    (exclude.groupId == lib.groupId && exclude.artifactId == "*") ||
     (exclude.groupId == "*" && exclude.artifactId == "*")
   }
 
@@ -67,4 +67,12 @@ case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterabl
 
 case class MResolver(id: String, name: String, url: String)
 
-case class MDescriptor(pkg: MPackage, deps: Iterable[MDependency], resolvers: Iterable[MResolver])
+case class MDescriptor(pkg: MPackage, deps: Iterable[MDependency], resolvers: Iterable[MResolver]) {
+  def filterDependencies(scope: Scope, excludes: Iterable[MLib]): Iterable[MDependency] = {
+    deps.filter { dep =>
+      dep.inScope(scope) &&
+      !excludes.exists(dep.isMatch) &&
+      !dep.optional
+    }
+  }
+}

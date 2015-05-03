@@ -93,7 +93,7 @@ case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
       (effectiveConfs.contains("*") ||
         artifact.confs.contains("*") ||
         artifact.confs.exists(effectiveConfs.contains)) &&
-      toExclude.forall(exclude => !pkg.lib.isMatch(exclude) || !artifact.isMatch(exclude))
+      !toExclude.exists(exclude => pkg.lib.isMatch(exclude) && artifact.isMatch(exclude))
     } map(_.name)
   }
 
