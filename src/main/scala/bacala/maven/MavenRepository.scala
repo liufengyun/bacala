@@ -21,8 +21,8 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
   def makeResolver(resolvers: Iterable[MResolver]):
       (MPackage => Option[MDescriptor], MLib => Option[Iterable[String]])
 
-  private val dependencies = new TrieMap[PackageT, DependenciesT]
-  private val libraries = new TrieMap[LibT, Set[PackageT]]
+  private val packagesMap = new TrieMap[PackageT, DependenciesT]
+  private val librariesMap = new TrieMap[LibT, Set[PackageT]]
 
   // the root package
   def root = initial.pkg
@@ -30,8 +30,8 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
   /** Builds the repository from initial constraints
     */
   def construct(scope: Scope) = {
-    dependencies.clear
-    libraries.clear
+    packagesMap.clear
+    librariesMap.clear
     resolve(initial, scope, Set(), Set())
   }
 
@@ -56,15 +56,15 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
           }
 
           // update dependency set
-          dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> set)))
+          packagesMap += pkg -> ((packagesMap.getOrElse(pkg, Set()) + (dep -> set)))
 
           // update conflict set
-          libraries += dep.lib -> (set | libraries.getOrElse(dep.lib, Set()))
+          librariesMap += dep.lib -> (set | librariesMap.getOrElse(dep.lib, Set()))
 
           // recursive resolve
           set.filter(!path.contains(_)).foreach { p =>
             // important: initialize dependency
-            dependencies.getOrElseUpdate(p, Set())
+            packagesMap.getOrElseUpdate(p, Set())
 
             pomResolver(p) match {
               case Some(pom) =>
@@ -80,7 +80,7 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
           } else {
             println(s"Warning: Failed to resolve dependency $dep in $pkg".yellow)
             // update dependency set
-            dependencies += pkg -> ((dependencies.getOrElse(pkg, Set()) + (dep -> Set())))
+            packagesMap += pkg -> ((packagesMap.getOrElse(pkg, Set()) + (dep -> Set())))
           }
       }
     }
@@ -88,13 +88,13 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
 
   /** Returns the packages that p depends on directly
     */
-  override def apply(p: PackageT) = dependencies(p)
+  override def apply(p: PackageT) = packagesMap(p)
 
   /** Returns all packages in the repository
     */
-  override def packages = dependencies.keys.filter(_ != root)
+  override def packages = packagesMap.keys.filter(_ != root)
 
   /** Returns all primitive conflicts in the repository
     */
-  override def conflicts = libraries.toMap
+  override def conflicts = librariesMap.toMap
 }
