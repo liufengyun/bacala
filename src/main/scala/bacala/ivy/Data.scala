@@ -81,9 +81,9 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
     */
   def getExtendedConfigurations(confSet: Set[String]) = {
     def allExtends(conf: String): Set[String] = {
-      var lst = confs(conf).extendList.toSet
+      val list = confs(conf).extendList.toSet
 
-      lst ++ (lst :\ Set[String]()) { (elem, acc) =>
+      list ++ (list :\ Set[String]()) { (elem, acc) =>
         acc ++ allExtends(elem)
       }
     }
