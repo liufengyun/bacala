@@ -26,18 +26,23 @@ object Worker {
   */
 abstract class CachedWorker[T, R] extends Worker[T, R] { outer =>
   def cache: Cache[T, Option[R]]
+  def worker: Worker[T, R] = null // optional worker
 
-  override def apply(p: T) = cache.fetch(p, None)
+  override def apply(p: T) = cache.fetch(p, None) match {
+    case None if (worker != null) =>
+      val value = worker(p)
+      cache.update(p, value)
+      value
+    case res => res
+  }
 
   override def or(fallback: T => Option[R]) = new CachedWorker[T, R] {
     override val cache = outer.cache
-
-    override def apply(p: T) = outer(p) match {
-      case None =>
-        val value = fallback(p)
-        cache.update(p, value)
-        value
-      case res => res
+    override val worker = {
+      if (outer.worker == null)
+        Worker(fallback)
+      else
+        outer.worker or fallback
     }
   }
 }
