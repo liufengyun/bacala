@@ -2,10 +2,36 @@ package bacala.maven
 
 import bacala.util._
 
-/** Fetches POM for a package
+trait Resolver { outer =>
+  def resolveDescriptor(p: MPackage): Option[String]
+  def resolveVersions(lib: MLib): Option[String]
+
+  def or(fallback: Resolver) = new Resolver {
+    def resolveDescriptor(p: MPackage) = {
+      (Worker(outer.resolveDescriptor _) or (fallback.resolveDescriptor _))(p)
+    }
+
+    def resolveVersions(lib: MLib) = {
+      (Worker(outer.resolveVersions _) or (fallback.resolveVersions _))(lib)
+    }
+  }
+}
+
+abstract class CachedResolver(resolver: Resolver) extends Resolver {
+  def descriptorCache: Cache[MPackage, Option[String]]
+  def versionsCache: Cache[MLib, Option[String]]
+
+  def resolveDescriptor(p: MPackage): Option[String] =
+    descriptorCache.fetch(p, resolver.resolveDescriptor(p))
+
+  def resolveVersions(lib: MLib): Option[String] =
+    versionsCache.fetch(lib, resolver.resolveVersions(lib))
+}
+
+/** Resolves descriptor or versions
   */
-class PomFetcher(base: String) extends Worker[MPackage, String] {
-  override def apply(p: MPackage) = HttpFetcher.get(pomURL(p))
+class MavenResolver(base: String) extends Resolver {
+  override def resolveDescriptor(p: MPackage) = HttpFetcher.get(pomURL(p))
 
   /** Returns POM URL for a package
     *
@@ -16,15 +42,10 @@ class PomFetcher(base: String) extends Worker[MPackage, String] {
   def pomURL(p: MPackage) = {
     s"${base}/${p.groupId.replace(".", "/")}/${p.artifactId}/${p.version}/${p.artifactId}-${p.version}.pom"
   }
-}
 
-
-/** Fetches Meta file for an artifact
-  */
-class MetaFetcher(base: String) extends Worker[MLib, String] {
   /** Fetches the Meta file
     */
-  override def apply(lib: MLib) = HttpFetcher.get(metaDataURL(lib))
+  override def resolveVersions(lib: MLib) = HttpFetcher.get(metaDataURL(lib))
 
   /** Returns the meta-data URL for a library
     *

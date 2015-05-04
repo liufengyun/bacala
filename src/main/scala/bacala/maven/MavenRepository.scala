@@ -18,8 +18,8 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
   type DependenciesT = Set[(DependencyT, Set[PackageT])]
 
   // resolvers
-  def makePomResolver(resolvers: Iterable[MResolver]): MPackage => Option[MDescriptor]
-  def makeMetaResolver(resolvers: Iterable[MResolver]): MLib => Option[Iterable[String]]
+  def makeResolver(resolvers: Iterable[MResolver]):
+      (MPackage => Option[MDescriptor], MLib => Option[Iterable[String]])
 
   private val dependencies = new TrieMap[PackageT, DependenciesT]
   private val libraries = new TrieMap[LibT, Set[PackageT]]
@@ -42,8 +42,7 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
     val deps = pom.filterDependencies(scope, excludes)
 
     // the resolvers will be added to the default resolver
-    val metaResolver = makeMetaResolver(resolvers)
-    val pomResolver = makePomResolver(resolvers)
+    val (pomResolver, metaResolver) = makeResolver(resolvers)
 
     deps.foreach { dep =>
       metaResolver(dep.lib).map(vers => dep.resolve(vers).filter(p => pomResolver(p).nonEmpty)) match {

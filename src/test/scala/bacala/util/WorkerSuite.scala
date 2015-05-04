@@ -40,8 +40,7 @@ class CachedWorkerSuite extends BasicSuite {
 
     val cachedWorker = new CachedWorker[Int, String] {
       override val cache = new MemoryCache[Int, Option[String]] {}
-      override val worker = worker1
-    }
+    } or worker1
 
     val worker4 = cachedWorker or worker2
     val worker5 = worker4 or worker3

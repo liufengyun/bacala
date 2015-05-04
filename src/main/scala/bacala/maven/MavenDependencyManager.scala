@@ -1,7 +1,7 @@
 package bacala.maven
 
 import bacala.core._
-import bacala.util.{Worker, DependencyTree, Measure}
+import bacala.util._
 import bacala.alg.SatSolver
 import bacala.util.ConsoleHelper.ColorText
 
@@ -9,16 +9,21 @@ object MavenDependencyManager {
   type TreeT = Tree[MPackage, DependencyEdge[MPackage, MDependency]]
 
   def createRepo(spec: String) = {
-    val pom = MavenPomParser(spec, Workers.chainPomFetchers(Workers.DefaultPomFetcher))
-    val repo = new MavenRepository(pom) with DependencyTree {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        val fetcher = Workers.chainPomFetchers(Workers.DefaultPomFetcher)(resolvers)
-        Workers.PomFileResolverCache or Workers.createPomResolver(fetcher)
-      }
+    val metaFileResolverCache = new CachedWorker[MLib, Iterable[String]] with
+        MemoryBase[MLib, Iterable[String]]
 
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        val fetcher = Workers.chainMetaFetchers(Workers.DefaultMetaFetcher)(resolvers)
-        Workers.MetaFileResolverCache or Workers.createMetaResolver(fetcher)
+    val pomFileResolverCache = new CachedWorker[MPackage, MDescriptor] with
+        MemoryBase[MPackage, MDescriptor]
+
+    val pom = MavenPomParser(spec, rs => p =>
+      Workers.chainResolvers(Workers.DefaultResolver)(rs).resolveDescriptor(p))
+
+    val repo = new MavenRepository(pom) with DependencyTree {
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        val resolver = Workers.chainResolvers(Workers.DefaultResolver)(resolvers)
+
+        (pomFileResolverCache or Workers.createPomParser(resolver),
+          metaFileResolverCache or Workers.createMetaParser(resolver))
       }
     }
 

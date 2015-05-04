@@ -64,16 +64,13 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
         (pkg: MLib) => pkg match {
           case MLib(_, "B") => Some(Seq("1.0"))
           case MLib(_, "C") => Some(Seq("1.3"))
           case _ => None
-        }
+        })
       }
     }
 
@@ -162,12 +159,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
@@ -255,12 +249,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
@@ -346,12 +337,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
@@ -442,12 +430,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
@@ -545,12 +530,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
@@ -643,12 +625,9 @@ class MavenRepositorySuite extends BasicSuite {
 
     val pom = MavenPomParser(root, null)
     val repo = new MavenRepository(pom) {
-      override def makePomResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null))
-      }
-
-      override def makeMetaResolver(resolvers: Iterable[MResolver]) = {
-        (pkg: MLib) => Some(Seq())
+      override def makeResolver(resolvers: Iterable[MResolver]) = {
+        ((pkg: MPackage) => fetcher(pkg).map(spec => MavenPomParser(spec, null)),
+          (pkg: MLib) => Some(Seq()))
       }
     }
 
