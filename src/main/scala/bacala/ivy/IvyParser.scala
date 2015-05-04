@@ -24,16 +24,16 @@ object IvyParser extends (String => IDescriptor) {
     val lib = ILib(moduleRevisionId.getOrganisation, moduleRevisionId.getName)
     val pkg = IPackage(lib, moduleRevisionId.getRevision)
 
-    val confs = md.getConfigurations.toSet map { (conf: Configuration) =>
-      IConf(conf.getName, conf.getDescription, conf.getVisibility.toString,
+    val confs = (md.getConfigurations map { (conf: Configuration) =>
+      conf.getName -> IConf(conf.getName, conf.getDescription, conf.getVisibility.toString,
         conf.getExtends.toSeq, conf.isTransitive, conf.getDeprecated)
-    }
+    }).toMap
 
-    val artfs = md.getAllArtifacts.toSet map { (artf: Artifact) =>
+    val artfs = (md.getAllArtifacts map { (artf: Artifact) =>
       val url = artf.getUrl
-      IArtifact(artf.getName, artf.getType, artf.getExt, artf.getConfigurations.toSeq,
+      artf.getName -> IArtifact(artf.getName, artf.getType, artf.getExt, artf.getConfigurations.toSeq,
         if (url == null) "" else url.toString)
-    }
+    }).toMap
 
     val excludes = md.getAllExcludeRules.toSet.map(toExclude)
 

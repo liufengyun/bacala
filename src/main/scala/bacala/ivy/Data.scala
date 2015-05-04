@@ -72,12 +72,32 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
   * 2. Extends between Ivy files are handled by the parser
   * 3. Inclusion of configuration files are handled by the parser
   */
-case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
-  artifacts: Set[IArtifact], excludes: Set[IExclude]) {
+case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDependency],
+  artifacts: Map[String, IArtifact], excludes: Set[IExclude]) {
+
+  /** Returns a set of configurations that are extended by the given configurations
+    *
+    * The returned set is a super set of the original set.
+    */
+  def getExtendedConfigurations(confSet: Set[String]) = {
+    def allExtends(conf: String): Set[String] = {
+      var lst = confs(conf).extendList.toSet
+
+      lst ++ (lst :\ Set[String]()) { (elem, acc) =>
+        acc ++ allExtends(elem)
+      }
+    }
+
+    (confSet :\ confSet) { (conf, acc) =>
+      if (confs.contains(conf)) acc ++ allExtends(conf)
+      else acc
+    }
+  }
 
   /** Filters dependencies according to given effective configurations and excludes
     */
-  def filterDependencies(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Seq[IDependency] = {
+  def filterDependencies(confSet: Set[String], toExclude: Seq[IExclude]): Seq[IDependency] = {
+    val effectiveConfs = getExtendedConfigurations(confSet)
     deps.filter { dep =>
       (effectiveConfs.contains("*") ||
         dep.mapping.contains("*") ||
@@ -88,18 +108,20 @@ case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
 
   /** Filters artifacts according to given effective configurations and excludes
     */
-  def filterArtifacts(effectiveConfs: Set[String], toExclude: Seq[IExclude]): Set[String] = {
-    artifacts.filter { artifact =>
+  def filterArtifacts(confSet: Set[String], toExclude: Seq[IExclude]): Set[String] = {
+    val effectiveConfs = getExtendedConfigurations(confSet)
+    (artifacts.filter { case (name, artifact) =>
       (effectiveConfs.contains("*") ||
         artifact.confs.contains("*") ||
         artifact.confs.exists(effectiveConfs.contains)) &&
       !toExclude.exists(exclude => pkg.lib.isMatch(exclude) && artifact.isMatch(exclude))
-    } map(_.name)
+    }).map(_._2.name).toSet
   }
 
   /** Filters excludes which are effective in the transitive dependency *dep*
     */
-  def filterExcludes(effectiveConfs: Set[String], dep: IDependency): Seq[IExclude] = {
+  def filterExcludes(confSet: Set[String], dep: IDependency): Seq[IExclude] = {
+    val effectiveConfs = getExtendedConfigurations(confSet)
     (dep.excludes ++ excludes) filter { exclude =>
       effectiveConfs.contains("*") ||
       exclude.confs.contains("*") ||
@@ -109,7 +131,8 @@ case class IDescriptor(pkg: IPackage, confs: Set[IConf], deps: Seq[IDependency],
 
   /** Filters active configurations in the dependency module
     */
-  def filterDepConfigurations(effectiveConfs: Set[String], dep: IDependency): Set[String] = {
+  def filterDepConfigurations(confSet: Set[String], dep: IDependency): Set[String] = {
+    val effectiveConfs = getExtendedConfigurations(confSet)
     (dep.mapping :\ Set[String]()) { case ((from, tos), acc) =>
       if (effectiveConfs.contains("*") ||
         effectiveConfs.contains(from) ||
