@@ -10,7 +10,7 @@ class MavenDependencySuite extends BasicSuite {
 
     val versions = List("0.2", "0.5", "1.3")
 
-    assert(dep.resolve(versions) == Set(
+    assert(dep.filterVersions(versions) == Set(
       MPackage(lib, "1.0"),
       MPackage(lib, "1.3")
     ))

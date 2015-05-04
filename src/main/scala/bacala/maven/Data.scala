@@ -48,7 +48,7 @@ case class MDependency(lib: MLib, versionConstraint: String, exclusions: Iterabl
   }
 
   // packages compatible with this dependency
-  def resolve(versions: Iterable[String]): Iterable[MPackage] = {
+  def filterVersions(versions: Iterable[String]): Iterable[MPackage] = {
     val range = VersionRange(versionConstraint)
     val compatibleVersions = versions.filter(v => range.contains(Version(v))).toSet
 

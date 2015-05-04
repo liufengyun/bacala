@@ -45,9 +45,10 @@ abstract class MavenRepository(initial: MDescriptor) extends Repository {
     val (pomResolver, metaResolver) = makeResolver(resolvers)
 
     deps.foreach { dep =>
-      metaResolver(dep.lib).map(vers => dep.resolve(vers).filter(p => pomResolver(p).nonEmpty)) match {
+      metaResolver(dep.lib).map(dep.filterVersions) match {
         case Some(pkgs) =>
-          val set = pkgs.toSet
+          // filter versions that can't be resolved
+          val set = pkgs.filter(p => pomResolver(p).nonEmpty).toSet
 
           // set can't be empty for root
           if (set.isEmpty && pkg == root) {
