@@ -1,6 +1,6 @@
 package bacala.ivy
 
-import bacala.core.{Lib, Dependency, Package, Version}
+import bacala.core.{Lib, Dependency, Package, VersionSelector}
 
 /** Defines data structure of Ivy XML file
   */
@@ -66,7 +66,10 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
   }
 
   // packages compatible with this dependency
-  def filterVersions(versions: Iterable[String]): Iterable[IPackage] = ???
+  def filterVersions(versions: Iterable[String]): Iterable[IPackage] = {
+    println("Getted version for " + lib + "(" + versions.mkString(",")  + ")")
+    VersionSelector(versionConstraint).choose(versions).map(IPackage(lib, _))
+  }
 }
 
 /** Representation of Ivy file

@@ -1,10 +1,9 @@
-package bacala.test.maven
+package bacala.test.core
 
 import bacala.test._
-import bacala.maven._
-import bacala.core.Version
+import bacala.core._
 
-class MavenVersionSuite extends BasicSuite {
+class VersionRangeSuite extends BasicSuite {
   test("simple range") {
     assert(VersionRange("3.6.2-RC4") === SimpleRange(Version(3, 6, 2, "RC4", 0)))
   }

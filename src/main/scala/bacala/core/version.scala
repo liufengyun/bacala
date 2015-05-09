@@ -11,22 +11,20 @@ import scala.util.matching.Regex
  *
  * TODO: SNAPSHOT versioning
  */
-case class Version(major:Int, minor:Int, revision:Int, qualifier:String, build:Int) {
-  def > (that: Version) = that < this
-
-  def < (that: Version) = {
-    if (this.major > that.major) false else
-      if (this.major < that.major) true else
-        if (this.minor > that.minor) false else
-          if (this.minor < that.minor) true else
-            if (this.revision > that.revision) false else
-              if (this.revision < that.revision) true else
-                if (this.qualifier == "" && that.qualifier != "") false else
-                  if (this.qualifier != "" && that.qualifier == "") true else
-                    if (this.qualifier > that.qualifier) false else
-                      if (this.qualifier < that.qualifier) true else
-                        if (this.build > that.build) false else
-                          if (this.build < that.build) true else false
+case class Version(major:Int, minor:Int, revision:Int, qualifier:String, build:Int) extends Ordered[Version] {
+  def compare(that: Version) = {
+    if (this.major > that.major) 1 else
+      if (this.major < that.major) -1 else
+        if (this.minor > that.minor) 1 else
+          if (this.minor < that.minor) -1 else
+            if (this.revision > that.revision) 1 else
+              if (this.revision < that.revision) -1 else
+                if (this.qualifier == "" && that.qualifier != "") 1 else
+                  if (this.qualifier != "" && that.qualifier == "") -1 else
+                    if (this.qualifier > that.qualifier) 1 else
+                      if (this.qualifier < that.qualifier) -1 else
+                        if (this.build > that.build) 1 else
+                          if (this.build < that.build) -1 else 0
   }
 
   override def toString = s"$major.$minor.$revision-$qualifier-$build"

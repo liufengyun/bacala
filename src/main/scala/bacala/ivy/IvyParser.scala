@@ -22,20 +22,21 @@ class IvyParser(settingPath: String) {
   if (settingPath != "")
     setting.load(new java.io.File(settingPath))
 
-  def listRevisions(lib: ILib): Seq[String] = {
-    ivy.listRevisions(lib.groupId, lib.name)
+  def listRevisions(lib: ILib): Option[Seq[String]] = {
+    Some(ivy.listRevisions(lib.groupId, lib.name))
   }
 
-  def getDescriptor(pkg: IPackage): IDescriptor = {
+  def getDescriptor(pkg: IPackage): Option[IDescriptor] = {
     val mid = new ModuleId(pkg.lib.groupId, pkg.lib.name)
     val resolvedMid = ivy.findModule(new ModuleRevisionId(mid, pkg.version))
+    val md = resolvedMid.getDescriptor()
 
-    toDescriptor(resolvedMid.getDescriptor())
+    Some(toDescriptor(md))
   }
 
   /** Parses a local Ivy file
     */
-  def parse(uri: String) = {
+  def parse(uri: String): IDescriptor = {
     val inputLoc = new URL(uri)
     val resource = new org.apache.ivy.plugins.repository.url.URLResource(inputLoc)
     val md = parser.parseDescriptor(setting, inputLoc, resource, false)

@@ -21,7 +21,7 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
   private val packagesMap = new TrieMap[PackageT, PackageInfo]
   private val librariesMap = new TrieMap[LibT, Set[PackageT]]
 
-  def versionsResolver(dep: DependencyT): Option[Seq[String]]
+  def versionsResolver(lib: LibT): Option[Seq[String]]
   def descriptorResolver(pkg: PackageT): Option[IDescriptor]
 
   // the root package
@@ -42,13 +42,18 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
   def resolve(ivy: IDescriptor, confs: Set[String], excludes: Seq[IExclude], path: Set[PackageT]): Unit = {
     val deps = ivy.filterDependencies(confs, excludes)
 
+    packagesMap += ivy.pkg -> packagesMap(ivy.pkg).copy(
+      dependencies = deps.map(_ -> Set[PackageT]()).toSet)
+
     deps.foreach { dep =>
       val depConfs = ivy.filterDepConfigurations(confs, dep)
       val activeExcludes = ivy.filterExcludes(confs, dep)
 
-      versionsResolver(dep).map(dep.filterVersions) match {
+      versionsResolver(dep.lib).map(dep.filterVersions) match {
         case Some(pkgs) =>
           val set = pkgs.toSet
+
+          println("Filtered version for " + dep.lib + "(" + pkgs.map(_.version).mkString(",")  + ")")
 
           // update dependency set
           val packageInfo = packagesMap(ivy.pkg)
@@ -62,6 +67,8 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
           set.filter(!path.contains(_)).foreach { p =>
             descriptorResolver(p) match {
               case Some(descriptor) =>
+                println("Get descriptor for " + p)
+
                 val newExcludes = excludes ++ activeExcludes
                 // update package info
                 val packageInfo = packagesMap.getOrElseUpdate(p,
@@ -101,4 +108,8 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
   /** Returns all primitive conflicts in the repository
     */
   override def conflicts = librariesMap.toMap
+
+  /** Returns active artifacts associated with the given package
+    */
+  def artifacts(p: PackageT): Iterable[String] = packagesMap(p).activeArtifacts
 }

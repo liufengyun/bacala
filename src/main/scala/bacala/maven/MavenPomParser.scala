@@ -3,6 +3,7 @@ package bacala.maven
 import scala.xml.XML
 import scala.xml.Node
 
+import bacala.core.VersionRange
 import bacala.util.Cache
 import bacala.util.ConsoleHelper.ColorText
 import Scope._
