@@ -20,7 +20,10 @@ class IvyParser(settingPath: String) {
   val parser = XmlModuleDescriptorParser.getInstance()
 
   if (settingPath != "")
-    setting.load(new java.io.File(settingPath))
+    ivy.configure(new java.io.File(settingPath))
+  else
+    ivy.configureDefault()
+
 
   def listRevisions(lib: ILib): Option[Seq[String]] = {
     Some(ivy.listRevisions(lib.groupId, lib.name))
@@ -42,9 +45,9 @@ class IvyParser(settingPath: String) {
     val md = parser.parseDescriptor(setting, inputLoc, resource, false)
 
     toDescriptor(md)
-  }
+   }
 
-  private def toDescriptor(md: ModuleDescriptor) = {
+  def toDescriptor(md: ModuleDescriptor) = {
     val moduleRevisionId = md.getModuleRevisionId
 
     val lib = ILib(moduleRevisionId.getOrganisation, moduleRevisionId.getName)
@@ -68,7 +71,7 @@ class IvyParser(settingPath: String) {
     IDescriptor(pkg, confs, deps, artfs, excludes)
   }
 
-  private def toExclude(rule: ExcludeRule): IExclude = {
+  def toExclude(rule: ExcludeRule): IExclude = {
       val artifactId = rule.getId
       val moduleId = artifactId.getModuleId
       val lib = ILib(moduleId.getOrganisation, moduleId.getName)
@@ -76,7 +79,7 @@ class IvyParser(settingPath: String) {
         rule.getMatcher.getName, rule.getConfigurations.toSeq)
   }
 
-  private def toDep(dep: DependencyDescriptor): IDependency = {
+  def toDep(dep: DependencyDescriptor): IDependency = {
     val moduleId = dep.getDependencyId
     val lib = ILib(moduleId.getOrganisation, moduleId.getName)
     val version = dep.getDependencyRevisionId.getRevision
