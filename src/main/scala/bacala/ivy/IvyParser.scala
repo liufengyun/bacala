@@ -32,9 +32,10 @@ class IvyParser(settingPath: String) {
   def getDescriptor(pkg: IPackage): Option[IDescriptor] = {
     val mid = new ModuleId(pkg.lib.groupId, pkg.lib.name)
     val resolvedMid = ivy.findModule(new ModuleRevisionId(mid, pkg.version))
-    val md = resolvedMid.getDescriptor()
-
-    Some(toDescriptor(md))
+    if (resolvedMid != null) {
+      val md = resolvedMid.getDescriptor()
+      Some(toDescriptor(md))
+    } else None
   }
 
   /** Parses a local Ivy file
