@@ -3,7 +3,7 @@ package bacala.test.core
 import bacala.core.Version
 import bacala.test._
 
-class MavenVersionSuite extends BasicSuite {
+class VersionSuite extends BasicSuite {
   test("simple versioning with major & minor") {
     assert(Version("10.5") === Version(10, 5, 0, "", 0))
   }
@@ -18,6 +18,7 @@ class MavenVersionSuite extends BasicSuite {
 
   test("versioning with qualifier") {
     assert(Version("3.6.2-RC4") === Version(3, 6, 2, "RC4", 0))
+    assert(Version("1.1.0-RC0") === Version(1, 1, 0, "RC0", 0))
   }
 
   test("full versioning") {

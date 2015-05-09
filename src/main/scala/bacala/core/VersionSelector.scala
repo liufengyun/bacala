@@ -29,13 +29,12 @@ case class RangeLatestSelector(prefix: String) extends VersionSelector {
 }
 
 object VersionSelector  {
-  val latestReg = """latest.integration""".r
-  val prefixLatest = """((?:\d.)+)\+""".r
+  val prefixLatest = """(\d(?:\.\d)?)\.\+""".r
 
   def apply(s: String): VersionSelector = s match {
-    case VersionRange(r) => RangeSelector(r)
-    case latestReg => LatestSelector
     case prefixLatest(prefix) => RangeLatestSelector(prefix)
+    case VersionRange(r) => RangeSelector(r)
+    case "latest.integration" => LatestSelector
     case _ => throw new InvalidVersionFormat("Unknown verion constraint: " + s)
   }
 
