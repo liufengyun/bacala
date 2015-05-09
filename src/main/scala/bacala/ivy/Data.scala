@@ -67,8 +67,11 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
 
   // packages compatible with this dependency
   def filterVersions(versions: Iterable[String]): Iterable[IPackage] = {
-    println("Getted version for " + lib + "(" + versions.mkString(",")  + ")")
     VersionSelector(versionConstraint).choose(versions).map(IPackage(lib, _))
+  }
+
+  override def toString = {
+    lib.toString + "(" + versionConstraint + ")"
   }
 }
 

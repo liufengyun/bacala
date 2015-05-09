@@ -5,13 +5,15 @@ import bacala.core._
 import bacala.util.DependencyTree
 import bacala.util.Measure
 import bacala.util.ConsoleHelper.ColorText
+import java.nio.file.Paths
 
 object IvyDependencyManager {
   type TreeT = Tree[IPackage, DependencyEdge[IPackage, IDependency]]
 
   def run(setting: String, file: String, config: String) = {
-    val parser = new IvyParser(setting)
-    val initial = parser.parse("file://" + file)
+    val absoluteSetting = if (setting == "") "" else Paths.get(setting).toAbsolutePath.toString
+    val parser = new IvyParser(absoluteSetting)
+    val initial = parser.parse("file://" + Paths.get(file).toAbsolutePath)
     val configuration = if (config == "") "default" else config
 
     implicit val repo = new IvyRepository(initial) with DependencyTree {
@@ -21,6 +23,9 @@ object IvyDependencyManager {
 
     val measure = new Measure()
     measure.time("Network IO") { repo.construct(configuration) }
+    repo.dump
+
+
     val solver = new SatSolver(repo)
 
     println("\n\n================  Resolution Result   ==================".bold)

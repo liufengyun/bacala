@@ -20,9 +20,9 @@ class IvyParser(settingPath: String) {
   val parser = XmlModuleDescriptorParser.getInstance()
 
   if (settingPath != "")
-    ivy.configure(new java.io.File(settingPath))
+    setting.load(new java.io.File(settingPath))
   else
-    ivy.configureDefault()
+    setting.loadDefault()
 
 
   def listRevisions(lib: ILib): Option[Seq[String]] = {
