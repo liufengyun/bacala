@@ -18,6 +18,7 @@ class VersionSelectorSuite extends BasicSuite {
   }
 
   test("latest selector") {
+    assert(VersionSelector("latest.release") === LatestSelector)
     assert(VersionSelector("latest.integration").choose(versions).toSet === Set("1.7.12"))
   }
 

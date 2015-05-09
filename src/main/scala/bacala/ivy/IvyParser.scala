@@ -26,7 +26,10 @@ class IvyParser(settingPath: String) {
 
 
   def listRevisions(lib: ILib): Option[Seq[String]] = {
-    Some(ivy.listRevisions(lib.groupId, lib.name))
+    val versions = ivy.listRevisions(lib.groupId, lib.name)
+
+    if (versions.length == 0) None
+    else Some(versions)
   }
 
   def getDescriptor(pkg: IPackage): Option[IDescriptor] = {

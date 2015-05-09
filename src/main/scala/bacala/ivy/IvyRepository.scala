@@ -50,9 +50,6 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
   def resolve(ivy: IDescriptor, confs: Set[String], excludes: Seq[IExclude], path: Set[PackageT]): Unit = {
     val deps = ivy.filterDependencies(confs, excludes)
 
-    packagesMap += ivy.pkg -> packagesMap(ivy.pkg).copy(
-      dependencies = deps.map(_ -> Set[PackageT]()).toSet)
-
     deps.foreach { dep =>
       val depConfs = ivy.filterDepConfigurations(confs, dep)
       val activeExcludes = ivy.filterExcludes(confs, dep)

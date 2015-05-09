@@ -35,6 +35,7 @@ object VersionSelector  {
     case prefixLatest(prefix) => RangeLatestSelector(prefix)
     case VersionRange(r) => RangeSelector(r)
     case "latest.integration" => LatestSelector
+    case "latest.release" => LatestSelector
     case _ => throw new InvalidVersionFormat("Unknown verion constraint: " + s)
   }
 
