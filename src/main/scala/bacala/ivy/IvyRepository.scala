@@ -37,6 +37,14 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
     resolve(initial, Set(conf), Seq(), Set())
   }
 
+  def dump = {
+    println("\n\n================  Packages   ==================".bold)
+    println(packagesMap.mkString("\n\n"))
+
+    println("\n\n================  Libraries   ==================".bold)
+    println(librariesMap.mkString("\n\n"))
+  }
+
   /** recursively builds the dependency closure
     */
   def resolve(ivy: IDescriptor, confs: Set[String], excludes: Seq[IExclude], path: Set[PackageT]): Unit = {
@@ -53,8 +61,6 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
         case Some(pkgs) =>
           val set = pkgs.toSet
 
-          println("Filtered version for " + dep.lib + "(" + pkgs.map(_.version).mkString(",")  + ")")
-
           // update dependency set
           val packageInfo = packagesMap(ivy.pkg)
           packagesMap += ivy.pkg -> packageInfo.copy(
@@ -65,9 +71,11 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
 
           // recursive resolve
           set.filter(!path.contains(_)).foreach { p =>
+            print("Get descriptor for " + p)
+
             descriptorResolver(p) match {
               case Some(descriptor) =>
-                println("Get descriptor for " + p)
+                println("   SUCCESS".green)
 
                 val newExcludes = excludes ++ activeExcludes
                 // update package info
@@ -82,9 +90,9 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
                 )
 
                 if (dep.transitive)
-                  resolve(ivy, depConfs, newExcludes, path + ivy.pkg)
+                  resolve(descriptor, depConfs, newExcludes, path + ivy.pkg)
               case None =>
-                println(s"Error: failed to download POM file for $p".red)
+                println("   FAILED".red)
             }
           }
         case None =>
