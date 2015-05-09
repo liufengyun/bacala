@@ -64,6 +64,9 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
   def isMatch(exclude: IExclude): Boolean = {
     lib.isMatch(exclude) && exclude.name == "*"
   }
+
+  // packages compatible with this dependency
+  def filterVersions(versions: Iterable[String]): Iterable[IPackage] = ???
 }
 
 /** Representation of Ivy file

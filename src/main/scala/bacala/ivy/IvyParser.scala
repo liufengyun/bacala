@@ -2,23 +2,48 @@ package bacala.ivy
 
 import java.io.{InputStream, ByteArrayInputStream}
 import java.net.URL
+import org.apache.ivy.core.module.descriptor.ModuleDescriptor
+import org.apache.ivy.core.module.id.ModuleId
+import org.apache.ivy.core.module.id.ModuleRevisionId
 import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorParser
 import org.apache.ivy.core.settings.IvySettings
 import org.apache.ivy.plugins.repository.BasicResource
 import org.apache.ivy.plugins.repository.url.URLResource
 import org.apache.ivy.core.module.descriptor.{ExcludeRule, DependencyDescriptor, Configuration, Artifact}
+import org.apache.ivy.Ivy
 
-/** Parses Ivy XML file using the Ivy library
+/** Fetches and parses Ivy XML file using the Ivy library
   */
-object IvyParser extends (String => IDescriptor) {
-  val parser = XmlModuleDescriptorParser.getInstance()
+class IvyParser(settingPath: String) {
   val setting = new IvySettings()
+  val ivy = Ivy.newInstance(setting)
+  val parser = XmlModuleDescriptorParser.getInstance()
 
-  override def apply(uri: String) = {
+  if (settingPath != "")
+    setting.load(new java.io.File(settingPath))
+
+  def listRevisions(lib: ILib): Seq[String] = {
+    ivy.listRevisions(lib.groupId, lib.name)
+  }
+
+  def getDescriptor(pkg: IPackage): IDescriptor = {
+    val mid = new ModuleId(pkg.lib.groupId, pkg.lib.name)
+    val resolvedMid = ivy.findModule(new ModuleRevisionId(mid, pkg.version))
+
+    toDescriptor(resolvedMid.getDescriptor())
+  }
+
+  /** Parses a local Ivy file
+    */
+  def parse(uri: String) = {
     val inputLoc = new URL(uri)
     val resource = new org.apache.ivy.plugins.repository.url.URLResource(inputLoc)
     val md = parser.parseDescriptor(setting, inputLoc, resource, false)
 
+    toDescriptor(md)
+  }
+
+  private def toDescriptor(md: ModuleDescriptor) = {
     val moduleRevisionId = md.getModuleRevisionId
 
     val lib = ILib(moduleRevisionId.getOrganisation, moduleRevisionId.getName)
@@ -42,7 +67,7 @@ object IvyParser extends (String => IDescriptor) {
     IDescriptor(pkg, confs, deps, artfs, excludes)
   }
 
-  def toExclude(rule: ExcludeRule): IExclude = {
+  private def toExclude(rule: ExcludeRule): IExclude = {
       val artifactId = rule.getId
       val moduleId = artifactId.getModuleId
       val lib = ILib(moduleId.getOrganisation, moduleId.getName)
@@ -50,7 +75,7 @@ object IvyParser extends (String => IDescriptor) {
         rule.getMatcher.getName, rule.getConfigurations.toSeq)
   }
 
-  def toDep(dep: DependencyDescriptor): IDependency = {
+  private def toDep(dep: DependencyDescriptor): IDependency = {
     val moduleId = dep.getDependencyId
     val lib = ILib(moduleId.getOrganisation, moduleId.getName)
     val version = dep.getDependencyRevisionId.getRevision

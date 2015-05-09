@@ -21,7 +21,7 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
   private val packagesMap = new TrieMap[PackageT, PackageInfo]
   private val librariesMap = new TrieMap[LibT, Set[PackageT]]
 
-  def versionsResolver(dep: DependencyT): Option[Seq[PackageT]]
+  def versionsResolver(dep: DependencyT): Option[Seq[String]]
   def descriptorResolver(pkg: PackageT): Option[IDescriptor]
 
   // the root package
@@ -46,7 +46,7 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
       val depConfs = ivy.filterDepConfigurations(confs, dep)
       val activeExcludes = ivy.filterExcludes(confs, dep)
 
-      versionsResolver(dep) match {
+      versionsResolver(dep).map(dep.filterVersions) match {
         case Some(pkgs) =>
           val set = pkgs.toSet
 
