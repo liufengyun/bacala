@@ -12,7 +12,13 @@ The objective of this project is:
 
 ## Run
 
-`sbt "run data/github-api.xml"`
+To resolve a POM file:
+
+    sbt "run data/github-api.xml"
+
+To resolve an Ivy file
+
+    sbt "run [<setting xml>] <ivy xml> [config]"
 
 The input XML is a POM file.
 
