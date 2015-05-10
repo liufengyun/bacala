@@ -49,10 +49,13 @@ object Version {
   val wildcard   =   """(\d+)\.(\d+)\.(\d+)(?:\.|-)(.+)""".r
 
   // unstandard: 1.0-b1, 1.0-b1.1, 2.0b4
-  val double    =   """(\d+)\.(\d+)[-_.]?(.+)""".r
+  val double     =   """(\d+)\.(\d+)[-_.]?(.+)""".r
 
   // unstandard: 1
   val number     =   """(\d+)""".r
+
+  // unstandard: r30
+  val reg1       =   """(\w+)""".r
 
   def apply(ver: String): Version = ver match {
     case simple(major, minor) =>
@@ -73,6 +76,8 @@ object Version {
       Version(major.toInt, minor.toInt, 0, qualifier, 0)
     case number(major) =>
       Version(major.toInt, 0, 0, "", 0)
+    case reg1(qualifier) =>
+      Version(0, 0, 0, qualifier, 0)
     case _ => throw new InvalidVersionFormat("Unknown version format: " + ver)
   }
 

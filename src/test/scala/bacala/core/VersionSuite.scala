@@ -48,6 +48,10 @@ class VersionSuite extends BasicSuite {
     assert(Version("20") === Version(20, 0, 0, "", 0))
   }
 
+  test("version like r32") {
+    assert(Version("r20") === Version(0, 0, 0, "r20", 0))
+  }
+
   test("Vesion comparison") {
     assert(Version("3.6.2-RC4-4") < Version("3.6.2-RC4-5"))
     assert(Version("3.6") > Version("3.5.2-RC4-5"))
