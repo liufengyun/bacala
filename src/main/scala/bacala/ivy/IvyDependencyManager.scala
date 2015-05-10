@@ -44,7 +44,7 @@ object IvyDependencyManager {
 
         if (level != 0) {
           val artifacts = repo.artifacts(pkg)
-          if (artifacts.size == 0 && artifacts.head == pkg.lib.name) {
+          if (artifacts.size == 1 && artifacts.head == pkg.lib.name) {
             println("  " * (level - 1) + pkg)
           } else {
             println("  " * (level - 1) + pkg + "(" + artifacts.mkString(",") + ")")
