@@ -20,8 +20,6 @@ To resolve an Ivy file
 
     sbt "run [<setting xml>] <ivy xml> [config]"
 
-The input XML is a POM file.
-
 ## Test
 
 `sbt test`
@@ -43,17 +41,15 @@ The input XML is a POM file.
   - [x] find an assignment or answer impossible
   - [x] find the minimal conflict set
   - [x] find the optimal solution according to weighted value
-- [ ] support multiple resolver types
-  - [ ] support FileSystem resolvers
-  - [x] support URL resolvers
-  - [ ] support SFTP resolvers
-  - [ ] support SSH resolvers
-  - [ ] support path pattern for configuration XML file
-  - [ ] support path pattern for artifact
 - [ ] support Ivy configuration file
-  - [ ] support force a specific package
-  - [ ] support configuration
-  - [ ] support custom conflict management
+  - [x] support configuration
+  - [x] support excludes
+  - [x] support artifacts
+  - [x] support transitive
+  - [x] support dynamic version constraints
+  - [ ] support force
+  - [ ] support conflicts
+  - [ ] support overrides
 - [ ] support download resources via Futures in parallel
 
 ## Reference
