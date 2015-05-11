@@ -72,7 +72,7 @@ object IvyDependencyManager {
     if (args.length == 1)
       run("", args(0), "")
     else if (args.length == 2)
-      run(args(0), args(1), "")
+      run("", args(0), args(1))
     else if (args.length == 3)
       run(args(0), args(1), args(2))
     else
