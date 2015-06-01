@@ -14,11 +14,11 @@ The objective of this project is:
 
 To resolve a POM file:
 
-    sbt "run data/pom/github-api.xml"
+    ./maven data/pom/github-api.xml
 
 To resolve an Ivy file
 
-    sbt "run [<setting xml>] <ivy xml> [config]"
+    ./ivy data/ivy/parseq.xml
 
 ## Test
 

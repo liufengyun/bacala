@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sbt "run-main bacala.maven.MavenDependencyManager $1"

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sbt "run-main bacala.ivy.IvyDependencyManager $1 $2 $3"
