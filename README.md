@@ -14,7 +14,7 @@ The objective of this project is:
 
 To resolve a POM file:
 
-    sbt "run data/github-api.xml"
+    sbt "run data/pom/github-api.xml"
 
 To resolve an Ivy file
 
