@@ -1,7 +1,8 @@
 package bacala.ivy
 
+import java.io.File
+import java.io.FileWriter
 import java.io.{InputStream, ByteArrayInputStream}
-import java.net.URL
 import org.apache.ivy.core.module.descriptor.ModuleDescriptor
 import org.apache.ivy.core.module.id.ModuleId
 import org.apache.ivy.core.module.id.ModuleRevisionId
@@ -41,15 +42,20 @@ class IvyParser(settingPath: String) {
     } else None
   }
 
-  /** Parses a local Ivy file
+  /** Parses an Ivy file
     */
-  def parse(uri: String): IDescriptor = {
-    val inputLoc = new URL(uri)
+  def parse(content: String): IDescriptor = {
+    import bacala.util.IOHelper._
+    val temp = File.createTempFile("bacala-ivy-temp", ".ivy")
+    temp.deleteOnExit
+    use(new FileWriter(temp)) { f => f.write(content) }
+
+    val inputLoc = temp.toURL
     val resource = new org.apache.ivy.plugins.repository.url.URLResource(inputLoc)
     val md = parser.parseDescriptor(setting, inputLoc, resource, false)
 
     toDescriptor(md)
-   }
+  }
 
   def toDescriptor(md: ModuleDescriptor) = {
     val moduleRevisionId = md.getModuleRevisionId
@@ -72,7 +78,7 @@ class IvyParser(settingPath: String) {
 
     val deps = md.getDependencies.toSeq.map(toDep)
 
-    IDescriptor(pkg, confs, deps, artfs, excludes)
+    IDescriptor(pkg, confs, deps, artfs, excludes, md)
   }
 
   def toExclude(rule: ExcludeRule): IExclude = {

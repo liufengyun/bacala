@@ -6,19 +6,44 @@ import bacala.util.DependencyTree
 import bacala.util.Measure
 import bacala.util.ConsoleHelper.ColorText
 import java.nio.file.Paths
+import scala.io.Source
 
 object IvyDependencyManager {
   type TreeT = Tree[IPackage, DependencyEdge[IPackage, IDependency]]
 
-  def run(setting: String, file: String, config: String) = {
+  def run(setting: String, content: String, config: String) = {
     val absoluteSetting = if (setting == "") "" else Paths.get(setting).toAbsolutePath.toString
     val parser = new IvyParser(absoluteSetting)
-    val initial = parser.parse("file://" + Paths.get(file).toAbsolutePath)
+    val initial = parser.parse(content)
     val configuration = if (config == "") "default" else config
 
+    val ivyCache = new IvyCache(".bacala_cache/ivy/", parser.parse)
+    val versionCache = new VersionsCache(".bacala_cache/ivy/")
+
     implicit val repo = new IvyRepository(initial) with DependencyTree {
-      def versionsResolver(lib: LibT) = parser.listRevisions(lib)
-      def descriptorResolver(pkg: PackageT) = parser.getDescriptor(pkg)
+      def versionsResolver(lib: LibT) = {
+        if (versionCache.exists(lib))
+          Some(versionCache.fetch(lib))
+        else
+          parser.listRevisions(lib) match {
+            case Some(l) =>
+              versionCache.update(lib, l)
+              Some(l)
+            case None => None
+          }
+      }
+
+      def descriptorResolver(pkg: PackageT) = {
+        if (ivyCache.exists(pkg))
+          Some(ivyCache.fetch(pkg))
+        else
+          parser.getDescriptor(pkg) match {
+            case Some(d) =>
+              ivyCache.update(pkg, d)
+              Some(d)
+            case None => None
+          }
+      }
     }
 
     val measure = new Measure()
@@ -67,14 +92,19 @@ object IvyDependencyManager {
     }
   }
 
+  def readFile(path: String): String = {
+    val longPath = Paths.get(path).toAbsolutePath.toString
+    Source.fromFile(longPath).mkString
+  }
+
 
   def main(args: Array[String]) = {
     if (args.length == 1)
-      run("", args(0), "")
+      run("", readFile(args(0)), "")
     else if (args.length == 2)
-      run("", args(0), args(1))
+      run("", readFile(args(0)), args(1))
     else if (args.length == 3)
-      run(args(0), args(1), args(2))
+      run(args(0), readFile(args(1)), args(2))
     else
       println("Usage: run [<setting xml>] <ivy xml> [config]")
   }

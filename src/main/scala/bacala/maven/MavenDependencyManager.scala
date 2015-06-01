@@ -71,7 +71,9 @@ object MavenDependencyManager {
 
     println("\n\n================  Resolution Result   ==================".bold)
     measure.time("Resolution") { solver.solve } match {
-      case Left(set) => printTree(repo.buildTree(set))
+      case Left(set) =>
+	 println("Solution Size: " + set.size)
+	 printTree(repo.buildTree(set))
       case Right(tree) => printTree(tree)
     }
 

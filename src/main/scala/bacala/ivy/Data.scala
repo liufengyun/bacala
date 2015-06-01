@@ -1,6 +1,7 @@
 package bacala.ivy
 
 import bacala.core.{Lib, Dependency, Package, VersionSelector}
+import org.apache.ivy.core.module.descriptor.ModuleDescriptor
 
 /** Defines data structure of Ivy XML file
   */
@@ -82,7 +83,7 @@ case class IDependency(lib: ILib, version: String, versionConstraint: String,
   * 3. Inclusion of configuration files are handled by the parser
   */
 case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDependency],
-  artifacts: Map[String, IArtifact], excludes: Set[IExclude]) {
+  artifacts: Map[String, IArtifact], excludes: Set[IExclude], md: ModuleDescriptor) {
 
   /** Returns a set of configurations that are extended by the given configurations
     *
