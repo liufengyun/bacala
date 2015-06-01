@@ -20,11 +20,11 @@ object IvyDependencyManager {
 
     val ivyWorker = new CachedWorker[IPackage, IDescriptor] {
       val cache = new IvyCache(".bacala_cache/ivy/", parser.parse)
-    }
+    } or parser.getDescriptor
 
     val versionWorker = new CachedWorker[ILib, Seq[String]] {
       val cache = new VersionsCache(".bacala_cache/ivy/")
-    }
+    } or parser.listRevisions
 
     implicit val repo = new IvyRepository(initial) with DependencyTree {
       def versionsResolver(lib: LibT) = versionWorker(lib)
