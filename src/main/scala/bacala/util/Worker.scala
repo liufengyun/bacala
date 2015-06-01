@@ -25,15 +25,18 @@ object Worker {
   * where the cache is located.
   */
 abstract class CachedWorker[T, R] extends Worker[T, R] { outer =>
-  def cache: Cache[T, Option[R]]
+  def cache: Cache[T, R]
   def worker: Worker[T, R] = null // optional worker
 
-  override def apply(p: T) = cache.fetch(p, None) match {
-    case None if (worker != null) =>
+  override def apply(p: T) = {
+    if (cache.exists(p))
+      Some(cache.fetch(p))
+    else if (worker != null) {
       val value = worker(p)
-      cache.update(p, value)
+      if (!value.isEmpty) cache.update(p, value.get)
       value
-    case res => res
+    } else None
+
   }
 
   override def or(fallback: T => Option[R]) = new CachedWorker[T, R] {
@@ -50,11 +53,11 @@ abstract class CachedWorker[T, R] extends Worker[T, R] { outer =>
 /** Defines a cache base
   */
 trait CacheBase[T, R] {
-  def cache: Cache[T, Option[R]]
+  def cache: Cache[T, R]
 }
 
 /** Provides memory-based cache for worker
   */
 trait MemoryBase[T, R] extends CacheBase[T, R] {
-  val cache = new MemoryCache[T, Option[R]] {}
+  val cache = new MemoryCache[T, R] {}
 }

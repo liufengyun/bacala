@@ -2,6 +2,7 @@ package bacala.ivy
 
 import bacala.alg.SatSolver
 import bacala.core._
+import bacala.util.CachedWorker
 import bacala.util.DependencyTree
 import bacala.util.Measure
 import bacala.util.ConsoleHelper.ColorText
@@ -17,33 +18,18 @@ object IvyDependencyManager {
     val initial = parser.parse(content)
     val configuration = if (config == "") "default" else config
 
-    val ivyCache = new IvyCache(".bacala_cache/ivy/", parser.parse)
-    val versionCache = new VersionsCache(".bacala_cache/ivy/")
+    val ivyWorker = new CachedWorker[IPackage, IDescriptor] {
+      val cache = new IvyCache(".bacala_cache/ivy/", parser.parse)
+    }
+
+    val versionWorker = new CachedWorker[ILib, Seq[String]] {
+      val cache = new VersionsCache(".bacala_cache/ivy/")
+    }
 
     implicit val repo = new IvyRepository(initial) with DependencyTree {
-      def versionsResolver(lib: LibT) = {
-        if (versionCache.exists(lib))
-          Some(versionCache.fetch(lib))
-        else
-          parser.listRevisions(lib) match {
-            case Some(l) =>
-              versionCache.update(lib, l)
-              Some(l)
-            case None => None
-          }
-      }
+      def versionsResolver(lib: LibT) = versionWorker(lib)
 
-      def descriptorResolver(pkg: PackageT) = {
-        if (ivyCache.exists(pkg))
-          Some(ivyCache.fetch(pkg))
-        else
-          parser.getDescriptor(pkg) match {
-            case Some(d) =>
-              ivyCache.update(pkg, d)
-              Some(d)
-            case None => None
-          }
-      }
+      def descriptorResolver(pkg: PackageT) = ivyWorker(pkg)
     }
 
     val measure = new Measure()
