@@ -18,14 +18,28 @@ trait Resolver { outer =>
 }
 
 abstract class CachedResolver(resolver: Resolver) extends Resolver {
-  def descriptorCache: Cache[MPackage, Option[String]]
-  def versionsCache: Cache[MLib, Option[String]]
+  def descriptorCache: Cache[MPackage, String]
+  def versionsCache: Cache[MLib, String]
 
-  def resolveDescriptor(p: MPackage): Option[String] =
-    descriptorCache.fetch(p, resolver.resolveDescriptor(p))
+  def resolveDescriptor(p: MPackage): Option[String] = {
+    if (descriptorCache.exists(p))
+      Some(descriptorCache.fetch(p))
+    else {
+      val value = resolver.resolveDescriptor(p)
+      if (!value.isEmpty) descriptorCache.update(p, value.get)
+      value
+    }
+  }
 
-  def resolveVersions(lib: MLib): Option[String] =
-    versionsCache.fetch(lib, resolver.resolveVersions(lib))
+  def resolveVersions(lib: MLib): Option[String] = {
+    if (versionsCache.exists(lib))
+      Some(versionsCache.fetch(lib))
+    else {
+      val value = resolver.resolveVersions(lib)
+      if (!value.isEmpty) versionsCache.update(lib, value.get)
+      value
+    }
+  }
 }
 
 /** Resolves descriptor or versions

@@ -6,6 +6,7 @@ import bacala.util._
 /** Workers factory
   */
 object Workers {
+  val cacheBaseDir = ".bacala_cache/pom/"
 
   val mavenMainBase = "http://repo1.maven.org/maven2"
 
@@ -18,8 +19,8 @@ object Workers {
   object Resolvers extends MemoryCache[String, Resolver] {
     def apply(url: String) = fetch(url,
       new CachedResolver(new MavenResolver(url)) {
-        val descriptorCache = new MemoryCache[MPackage, Option[String]] {}
-        val versionsCache = new MemoryCache[MLib, Option[String]] {}
+        val descriptorCache = new PomCache(cacheBaseDir)
+        val versionsCache = new VersionsCache(cacheBaseDir)
       })
   }
 
