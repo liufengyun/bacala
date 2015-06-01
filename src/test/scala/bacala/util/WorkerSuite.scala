@@ -39,7 +39,7 @@ class CachedWorkerSuite extends BasicSuite {
     }
 
     val cachedWorker = new CachedWorker[Int, String] {
-      override val cache = new MemoryCache[Int, Option[String]] {}
+      override val cache = new MemoryCache[Int, String] {}
     } or worker1
 
     val worker4 = cachedWorker or worker2
@@ -47,19 +47,19 @@ class CachedWorkerSuite extends BasicSuite {
 
     assert(cachedWorker(1) === Some("good"))
     assert(cachedWorker(2) === None)
-    assert(cachedWorker.cache.fetch(1, Some("")) === Some("good"))
-    assert(cachedWorker.cache.fetch(2, Some("")) === None)
+    assert(cachedWorker.cache.fetch(1) === "good")
+    assert(!cachedWorker.cache.exists(2))
 
     assert(worker4(1) === Some("good"))
     assert(worker4(2) === Some("good"))
-    assert(cachedWorker.cache.fetch(1, Some("")) === Some("good"))
-    assert(cachedWorker.cache.fetch(2, Some("")) === Some("good"))
+    assert(cachedWorker.cache.fetch(1) === "good")
+    assert(cachedWorker.cache.fetch(2) === "good")
 
     assert(worker5(1) === Some("good"))
     assert(worker5(2) === Some("good"))
     assert(worker5(3) === Some("good"))
-    assert(cachedWorker.cache.fetch(1, Some("")) === Some("good"))
-    assert(cachedWorker.cache.fetch(2, Some("")) === Some("good"))
-    assert(cachedWorker.cache.fetch(3, Some("")) === Some("good"))
+    assert(cachedWorker.cache.fetch(1) === "good")
+    assert(cachedWorker.cache.fetch(2) === "good")
+    assert(cachedWorker.cache.fetch(3) === "good")
   }
 }

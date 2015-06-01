@@ -18,7 +18,7 @@ class IvyCache(val baseDir: String, parser: String => IDescriptor) extends FileC
 }
 
 class VersionsCache(val baseDir: String) extends FileCache[ILib, Seq[String]] {
-  val keyToPath = (lib: ILib) => lib.groupId + ".txt"
+  val keyToPath = (lib: ILib) => new File(lib.groupId, lib.name).toString + ".txt"
   val valueToString = (v: Seq[String]) => v.mkString("\n")
   val stringToValue = (str: String) => str.split("\n").toSeq
 }

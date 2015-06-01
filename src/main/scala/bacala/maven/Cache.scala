@@ -13,7 +13,7 @@ class PomCache(val baseDir: String) extends FileCache[MPackage, String] {
 }
 
 class VersionsCache(val baseDir: String) extends FileCache[MLib, String] {
-  val keyToPath = (lib: MLib) => lib.groupId + ".xml"
+  val keyToPath = (lib: MLib) => new File(lib.groupId, lib.artifactId).toString + ".xml"
   val valueToString = (v: String) => v
 
   val stringToValue = (content: String) => content
