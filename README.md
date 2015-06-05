@@ -7,7 +7,6 @@ Bacala is an experimental package dependency manager for Scala projects.
 The objective of this project is:
 
 - Use SAT solvers as the core algorithm
-- Improve efficiency of network IO through reactive programming
 - Provide well-defined API and command line interface
 
 ## Run
@@ -36,7 +35,7 @@ To resolve an Ivy file
   - [x] support aggregating dependencies from multiple mudules
   - [x] support chaining multiple repositories
   - [x] support excludes in POM
-  - [ ] support SNAPSHOT versioning
+  - [x] support SNAPSHOT versioning
 - [x] resolve dependency via SAT solver
   - [x] find an assignment or answer impossible
   - [x] find the minimal conflict set
