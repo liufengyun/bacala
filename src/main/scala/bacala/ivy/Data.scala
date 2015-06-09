@@ -90,6 +90,8 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
     * The returned set is a super set of the original set.
     */
   def getExtendedConfigurations(confSet: Set[String]) = {
+    val backup = """(\w+)\(([\w*_]+)\)""".r
+
     def allExtends(conf: String): Set[String] = {
       val list = confs(conf).extendList.toSet
 
@@ -98,9 +100,19 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
       }
     }
 
-    (confSet :\ confSet) { (conf, acc) =>
-      if (confs.contains(conf)) acc ++ allExtends(conf)
-      else acc
+    (confSet :\ Set[String]()) { (conf, acc) =>
+      // handle the case compile(*)
+      conf match {
+        case backup(first, second) =>
+          if (confs.contains(first)) acc ++ allExtends(first) + first
+          else if (confs.contains(second)) acc ++ allExtends(second) + second
+          else if (second == "*") acc ++ confs.keys.toSet
+          else acc
+        case _ =>
+          if (confs.contains(conf)) acc ++ allExtends(conf) + conf
+          else if (conf == "*") acc ++ confs.keys.toSet
+          else acc
+      }
     }
   }
 
@@ -109,8 +121,7 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
   def filterDependencies(confSet: Set[String], toExclude: Seq[IExclude]): Seq[IDependency] = {
     val effectiveConfs = getExtendedConfigurations(confSet)
     deps.filter { dep =>
-      (effectiveConfs.contains("*") ||
-        dep.mapping.contains("*") ||
+      ( dep.mapping.contains("*") ||
         dep.mapping.keys.exists(effectiveConfs.contains)) &&
       toExclude.forall(!dep.isMatch(_))
     }
@@ -121,8 +132,7 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
   def filterArtifacts(confSet: Set[String], toExclude: Seq[IExclude]): Set[String] = {
     val effectiveConfs = getExtendedConfigurations(confSet)
     (artifacts.filter { case (name, artifact) =>
-      (effectiveConfs.contains("*") ||
-        artifact.confs.contains("*") ||
+      ( artifact.confs.contains("*") ||
         artifact.confs.exists(effectiveConfs.contains)) &&
       !toExclude.exists(exclude => pkg.lib.isMatch(exclude) && artifact.isMatch(exclude))
     }).map(_._2.name).toSet
@@ -133,7 +143,6 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
   def filterExcludes(confSet: Set[String], dep: IDependency): Seq[IExclude] = {
     val effectiveConfs = getExtendedConfigurations(confSet)
     (dep.excludes ++ excludes) filter { exclude =>
-      effectiveConfs.contains("*") ||
       exclude.confs.contains("*") ||
       exclude.confs.exists(effectiveConfs.contains)
     }
@@ -144,9 +153,7 @@ case class IDescriptor(pkg: IPackage, confs: Map[String, IConf], deps: Seq[IDepe
   def filterDepConfigurations(confSet: Set[String], dep: IDependency): Set[String] = {
     val effectiveConfs = getExtendedConfigurations(confSet)
     (dep.mapping :\ Set[String]()) { case ((from, tos), acc) =>
-      if (effectiveConfs.contains("*") ||
-        effectiveConfs.contains(from) ||
-        from == "*")
+      if (effectiveConfs.contains(from) || from == "*")
         acc ++ tos
       else
         acc
