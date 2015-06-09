@@ -56,7 +56,7 @@ abstract class IvyRepository(initial: IDescriptor) extends Repository {
 
       versionsResolver(dep.lib).map(dep.filterVersions) match {
         case Some(pkgs) =>
-          val set = pkgs.toSet
+          val set = pkgs.filter(descriptorResolver(_).nonEmpty).toSet
 
           // update dependency set
           val packageInfo = packagesMap(ivy.pkg)
